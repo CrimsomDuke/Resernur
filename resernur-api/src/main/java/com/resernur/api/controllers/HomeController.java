@@ -9,6 +9,7 @@ import java.util.Map;
 public class HomeController {
     @GetMapping("/api/")
     public Map<String, String> home() {
-        return Map.of("message", "Welcome to the Resernur API");
+        throw new UnsupportedOperationException("Not supported yet.");
+
     }
 }
