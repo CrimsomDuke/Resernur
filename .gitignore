@@ -1,0 +1,61 @@
+# =================================================================
+# Root Level Settings
+# =================================================================
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
+
+# =================================================================
+# Backend (Spring Boot / Maven / Gradle)
+# =================================================================
+**/target/
+**/build/
+**/*.class
+**/*.jar
+**/*.war
+**/*.ear
+**/*.zip
+**/*.tar.gz
+
+# Maven wrapper
+**/.mvn/wrapper/maven-wrapper.jar
+
+# Help files
+**/HELP.md
+
+# =================================================================
+# Frontend (React / Node.js)
+# =================================================================
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+**/.eslintcache
+**/.stylelintcache
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =================================================================
+# IDEs and Editors
+# =================================================================
+# IntelliJ IDEA
+**/.idea/
+*.iws
+*.iml
+*.ipr
+
+# Visual Studio Code
+**/.vscode/
+**/sftp.json
+**/project.xcworkspace/
+
+# NetBeans
+**/nbproject/private/
+**/nbbuild/
+**/dist/
+**/nbdist/
