@@ -1,10 +1,12 @@
 package com.resernur.api.services;
 
+import com.resernur.api.dtos.PlaceDTO;
 import com.resernur.api.dtos.PlaceImageResponseDTO;
 import com.resernur.api.models.Place;
 import com.resernur.api.models.PlaceImage;
 import com.resernur.api.repositories.PlaceImageRepository;
 import com.resernur.api.repositories.PlaceRepository;
+import com.resernur.api.repositories.users.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,10 +16,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class PlaceService {
@@ -25,26 +25,52 @@ public class PlaceService {
     private PlaceRepository placeRepository;
     @Autowired
     private PlaceImageRepository placeImageRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     @Value("${media.images.path}")
     private String imagesPath;
 
-    public List<Place> getAllPlaces() {
-        return placeRepository.findAll();
+    // CRUD OPERATIONS
+    public List<PlaceDTO> getAllPlaces() {
+        return placeRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public Optional<Place> getPlaceById(int id) {
-        return placeRepository.findById(id);
+    public Optional<PlaceDTO> getPlaceById(int id) {
+        return placeRepository.findById(id).map(this::toDTO);
     }
 
-    public Place savePlace(Place place) {
-        return placeRepository.save(place);
+    public PlaceDTO createPlace(PlaceDTO dto) {
+        Place place = new Place();
+        place.setName(dto.getName());
+        place.setDescription(dto.getDescription());
+        place.setCapacity(dto.getCapacity());
+        place.setStatus(com.resernur.api.models.enums.PlaceStatus.AVAILABLE);
+        // Asignar usuario responsable
+        userRepository.findById((long) dto.getUserInChargeId()).ifPresent(place::setUserInCharge);
+        return toDTO(placeRepository.save(place));
     }
 
-    public void deletePlaceById(int id) {
-        placeRepository.deleteById(id);
+    public Optional<PlaceDTO> updatePlace(int id, PlaceDTO dto) {
+        return placeRepository.findById(id).map(place -> {
+            place.setName(dto.getName());
+            place.setDescription(dto.getDescription());
+            place.setCapacity(dto.getCapacity());
+            // Asignar usuario responsable
+            userRepository.findById((long) dto.getUserInChargeId()).ifPresent(place::setUserInCharge);
+            return toDTO(placeRepository.save(place));
+        });
     }
 
+    public boolean deletePlaceById(int id) {
+        if (placeRepository.existsById(id)) {
+            placeRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
+    // IMAGE OPERATIONS
     public List<PlaceImageResponseDTO> uploadImages(int placeId, List<MultipartFile> images) throws IOException {
         Optional<Place> placeOpt = placeRepository.findById(placeId);
         if (placeOpt.isEmpty()) throw new IllegalArgumentException("Place not found");
@@ -67,27 +93,40 @@ public class PlaceService {
         return responseList;
     }
 
-    public void deleteImage(int imageId) throws IOException {
+    public boolean deleteImage(int imageId) throws IOException {
         Optional<PlaceImage> imgOpt = placeImageRepository.findById(imageId);
         if (imgOpt.isPresent()) {
             PlaceImage img = imgOpt.get();
             Path filePath = Paths.get(imagesPath, img.getFilePath());
             Files.deleteIfExists(filePath);
             placeImageRepository.deleteById(imageId);
+            return true;
         }
+        return false;
     }
 
     public List<PlaceImageResponseDTO> getImagesForPlace(int placeId) {
         List<PlaceImage> images = placeImageRepository.findAll();
-        List<PlaceImageResponseDTO> dtos = new ArrayList<>();
-        for (PlaceImage img : images) {
-            if (img.getPlace().getId() == placeId) {
-                PlaceImageResponseDTO dto = new PlaceImageResponseDTO();
-                dto.setId(img.getId());
-                dto.setUrl("/api/places/images/" + img.getFilePath());
-                dtos.add(dto);
-            }
+        return images.stream()
+                .filter(img -> img.getPlace().getId() == placeId)
+                .map(img -> {
+                    PlaceImageResponseDTO dto = new PlaceImageResponseDTO();
+                    dto.setId(img.getId());
+                    dto.setUrl("/api/places/images/" + img.getFilePath());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // DTO MAPPING
+    private PlaceDTO toDTO(Place place) {
+        PlaceDTO dto = new PlaceDTO();
+        dto.setName(place.getName());
+        dto.setDescription(place.getDescription());
+        dto.setCapacity(place.getCapacity());
+        if (place.getUserInCharge() != null) {
+            dto.setUserInChargeId(place.getUserInCharge().getId().intValue());
         }
-        return dtos;
+        return dto;
     }
 }
