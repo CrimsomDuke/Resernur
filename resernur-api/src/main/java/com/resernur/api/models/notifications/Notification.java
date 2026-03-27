@@ -1,4 +1,4 @@
-package com.resernur.api.models;
+package com.resernur.api.models.notifications;
 
 import com.resernur.api.models.users.User;
 import jakarta.persistence.*;

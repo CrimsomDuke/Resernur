@@ -1,5 +1,6 @@
-package com.resernur.api.models;
+package com.resernur.api.models.bookings;
 
+import com.resernur.api.models.files.File;
 import com.resernur.api.models.enums.BookingRequestStatus;
 import com.resernur.api.models.users.User;
 import jakarta.persistence.*;

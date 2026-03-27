@@ -1,4 +1,4 @@
-package com.resernur.api.models;
+package com.resernur.api.models.places;
 
 import com.resernur.api.models.enums.PlaceStatus;
 import com.resernur.api.models.users.User;

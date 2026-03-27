@@ -1,6 +1,7 @@
-package com.resernur.api.models;
+package com.resernur.api.models.bookings;
 
 import com.resernur.api.models.enums.BookingStatus;
+import com.resernur.api.models.places.Place;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 

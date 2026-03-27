@@ -1,9 +1,9 @@
 package com.resernur.api.controllers.places;
 
-import com.resernur.api.dtos.PlaceDTO;
-import com.resernur.api.dtos.PlaceImageResponseDTO;
-import com.resernur.api.services.PlaceImageService;
-import com.resernur.api.services.PlaceService;
+import com.resernur.api.dtos.places.PlaceDTO;
+import com.resernur.api.dtos.places.PlaceImageResponseDTO;
+import com.resernur.api.services.places.PlaceImageService;
+import com.resernur.api.services.places.PlaceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

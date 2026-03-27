@@ -1,5 +1,5 @@
-package com.resernur.api.repositories;
-import com.resernur.api.models.PlaceImage;
+package com.resernur.api.repositories.places;
+import com.resernur.api.models.places.PlaceImage;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

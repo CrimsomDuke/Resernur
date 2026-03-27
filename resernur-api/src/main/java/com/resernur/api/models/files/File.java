@@ -1,7 +1,7 @@
 
-package com.resernur.api.models;
+package com.resernur.api.models.files;
 
-import com.resernur.api.models.Booking;
+import com.resernur.api.models.bookings.Booking;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 

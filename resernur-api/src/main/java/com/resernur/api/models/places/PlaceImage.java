@@ -1,4 +1,4 @@
-package com.resernur.api.models;
+package com.resernur.api.models.places;
 
 import jakarta.persistence.*;
 import lombok.Getter;

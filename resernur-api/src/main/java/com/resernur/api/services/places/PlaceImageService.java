@@ -1,10 +1,10 @@
-package com.resernur.api.services;
+package com.resernur.api.services.places;
 
-import com.resernur.api.dtos.PlaceImageResponseDTO;
-import com.resernur.api.models.Place;
-import com.resernur.api.models.PlaceImage;
-import com.resernur.api.repositories.PlaceImageRepository;
-import com.resernur.api.repositories.PlaceRepository;
+import com.resernur.api.dtos.places.PlaceImageResponseDTO;
+import com.resernur.api.models.places.Place;
+import com.resernur.api.models.places.PlaceImage;
+import com.resernur.api.repositories.places.PlaceImageRepository;
+import com.resernur.api.repositories.places.PlaceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
