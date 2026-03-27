@@ -26,18 +26,21 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable()) // Already disabled
                 .cors(Customizer.withDefaults()) // Recommended for React frontend
+
+                /* // Reglas de autorización: permitir acceso público a /media/** y auth/docs; exigir auth al resto
+
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/auth/register").permitAll()
-                        .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers(
+                                "/media/**",
+                                "/api/auth/**",
                                 "/v3/api-docs/**",
-                                "/api/swagger-ui/**",
-                                "/api/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
                                 "/api/docs/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+                */
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // --- ADD THESE LINES TO DEACTIVATE THE BUILT-IN UI ---
                 .formLogin(form -> form.disable())

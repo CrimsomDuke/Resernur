@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,6 +31,14 @@ public class PlaceService {
 
     @Value("${media.images.path}")
     private String imagesPath;
+
+    @Value("${app.public-url:}")
+    private String publicUrlBase;
+
+    @Value("${media.endpoint}")
+    private String mediaEndpoint;
+
+    private static final long MAX_IMAGE_SIZE = 5L * 1024L * 1024L; // 5 MB
 
     // CRUD OPERATIONS
     public List<PlaceDTO> getAllPlaces() {
@@ -76,18 +85,30 @@ public class PlaceService {
         if (placeOpt.isEmpty()) throw new IllegalArgumentException("Place not found");
         Place place = placeOpt.get();
         List<PlaceImageResponseDTO> responseList = new ArrayList<>();
+
         for (MultipartFile image : images) {
-            String filename = UUID.randomUUID() + "_" + image.getOriginalFilename();
-            Path filePath = Paths.get(imagesPath, filename);
+            validateImage(image);
+
+            String original = Optional.ofNullable(image.getOriginalFilename()).orElse("file");
+            String sanitized = Paths.get(original).getFileName().toString(); // evita rutas
+            String ext = getExtension(sanitized);
+            String filename = UUID.randomUUID().toString() + (ext.isEmpty() ? "" : "." + ext);
+
+            String relativePath = String.join("/", Arrays.asList("places", String.valueOf(placeId), filename));
+
+            Path filePath = Paths.get(imagesPath, "places", String.valueOf(placeId), filename);
             Files.createDirectories(filePath.getParent());
             image.transferTo(filePath.toFile());
+
             PlaceImage placeImage = new PlaceImage();
             placeImage.setPlace(place);
-            placeImage.setFilePath(filename);
+            placeImage.setFilePath(relativePath);
+
             placeImage = placeImageRepository.save(placeImage);
+
             PlaceImageResponseDTO dto = new PlaceImageResponseDTO();
             dto.setId(placeImage.getId());
-            dto.setUrl("/api/places/images/" + filename);
+            dto.setUrl(buildPublicUrl(relativePath));
             responseList.add(dto);
         }
         return responseList;
@@ -97,7 +118,7 @@ public class PlaceService {
         Optional<PlaceImage> imgOpt = placeImageRepository.findById(imageId);
         if (imgOpt.isPresent()) {
             PlaceImage img = imgOpt.get();
-            Path filePath = Paths.get(imagesPath, img.getFilePath());
+            Path filePath = Paths.get(imagesPath, img.getFilePath().replace("/", java.io.File.separator));
             Files.deleteIfExists(filePath);
             placeImageRepository.deleteById(imageId);
             return true;
@@ -106,13 +127,12 @@ public class PlaceService {
     }
 
     public List<PlaceImageResponseDTO> getImagesForPlace(int placeId) {
-        List<PlaceImage> images = placeImageRepository.findAll();
+        List<PlaceImage> images = placeImageRepository.findByPlace_Id(placeId);
         return images.stream()
-                .filter(img -> img.getPlace().getId() == placeId)
                 .map(img -> {
                     PlaceImageResponseDTO dto = new PlaceImageResponseDTO();
                     dto.setId(img.getId());
-                    dto.setUrl("/api/places/images/" + img.getFilePath());
+                    dto.setUrl(buildPublicUrl(img.getFilePath()));
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -128,5 +148,32 @@ public class PlaceService {
             dto.setUserInChargeId(place.getUserInCharge().getId().intValue());
         }
         return dto;
+    }
+
+    // Helpers
+    private void validateImage(MultipartFile image) {
+        if (image == null || image.isEmpty()) throw new IllegalArgumentException("Empty file");
+        if (image.getSize() > MAX_IMAGE_SIZE) throw new IllegalArgumentException("File too large");
+        String contentType = image.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) throw new IllegalArgumentException("Invalid file type");
+    }
+
+    private String getExtension(String filename) {
+        int idx = filename.lastIndexOf('.');
+        if (idx <= 0 || idx == filename.length() - 1) return "";
+        return filename.substring(idx + 1);
+    }
+
+    private String buildPublicUrl(String relativePath) {
+        String normalized = relativePath.replace("\\", "/");
+        if (publicUrlBase != null && !publicUrlBase.isBlank()) {
+            // Normalizar base y concatenar de forma segura
+            String base = publicUrlBase.endsWith("/") ? publicUrlBase.substring(0, publicUrlBase.length()-1) : publicUrlBase;
+            return base + "/" + mediaEndpoint + "/" + normalized;
+        }
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/" + mediaEndpoint + "/")
+                .path(normalized)
+                .toUriString();
     }
 }
