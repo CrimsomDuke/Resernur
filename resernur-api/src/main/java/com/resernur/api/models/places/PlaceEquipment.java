@@ -2,8 +2,12 @@ package com.resernur.api.models.places;
 
 import com.resernur.api.models.enums.PlaceEquipmentStatus;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
+@Getter
+@Setter
 public class PlaceEquipment {
 
     @Id
@@ -20,5 +24,7 @@ public class PlaceEquipment {
     @Column(nullable = false)
     private PlaceEquipmentStatus status = PlaceEquipmentStatus.AVAILABLE;
 
-    // Getters and setters
+    @Column(nullable = false)
+    private int quantity = 1;
+
 }
