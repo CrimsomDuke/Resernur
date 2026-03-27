@@ -24,7 +24,6 @@ public class PlaceEquipmentService {
     @Autowired
     private PlaceRepository placeRepository;
 
-    // 1. Create an equipment for a Place
     public PlaceEquipmentResponseDTO createEquipment(PlaceEquipmentCreateDTO dto) {
         Optional<Place> placeOpt = placeRepository.findById(dto.getPlaceId());
         if (placeOpt.isEmpty()) throw new IllegalArgumentException("Place not found");
@@ -43,7 +42,6 @@ public class PlaceEquipmentService {
         return toDTO(saved);
     }
 
-    // 2. Modify the state of a PlaceEquipment
     public PlaceEquipmentResponseDTO changeState(int equipmentId, String newState) {
         PlaceEquipment equipment = placeEquimentRepository.findById(equipmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Equipment not found"));
@@ -53,7 +51,6 @@ public class PlaceEquipmentService {
         return toDTO(saved);
     }
 
-    // 3. Move an equipment to another place
     public PlaceEquipmentResponseDTO moveEquipment(int equipmentId, int newPlaceId) {
         PlaceEquipment equipment = placeEquimentRepository.findById(equipmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Equipment not found"));
@@ -64,13 +61,11 @@ public class PlaceEquipmentService {
         return toDTO(saved);
     }
 
-    // 4. Get all the equipments for a certain Place
     public List<PlaceEquipmentResponseDTO> getEquipmentsByPlace(int placeId) {
         List<PlaceEquipment> list = placeEquimentRepository.findByPlace_Id(placeId);
         return list.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    // 5. Modify the quantity of an equipment
     public PlaceEquipmentResponseDTO modifyQuantity(int equipmentId, int newQuantity) {
         if (newQuantity < 0) throw new IllegalArgumentException("Quantity cannot be negative");
         PlaceEquipment equipment = placeEquimentRepository.findById(equipmentId)
@@ -80,7 +75,6 @@ public class PlaceEquipmentService {
         return toDTO(saved);
     }
 
-    // Update using UpdateDTO (optional helper)
     public PlaceEquipmentResponseDTO updateEquipment(int equipmentId, PlaceEquipmentUpdateDTO dto) {
         PlaceEquipment equipment = placeEquimentRepository.findById(equipmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Equipment not found"));
@@ -98,7 +92,6 @@ public class PlaceEquipmentService {
         return toDTO(saved);
     }
 
-    // Delete equipment (helper)
     public boolean deleteEquipment(int equipmentId) {
         if (placeEquimentRepository.existsById(equipmentId)) {
             placeEquimentRepository.deleteById(equipmentId);
@@ -107,7 +100,6 @@ public class PlaceEquipmentService {
         return false;
     }
 
-    // Helpers
     private PlaceEquipmentResponseDTO toDTO(PlaceEquipment equipment) {
         PlaceEquipmentResponseDTO dto = new PlaceEquipmentResponseDTO();
         dto.setId(equipment.getId());
