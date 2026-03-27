@@ -2,6 +2,7 @@ package com.resernur.api.controllers.places;
 
 import com.resernur.api.dtos.PlaceDTO;
 import com.resernur.api.dtos.PlaceImageResponseDTO;
+import com.resernur.api.services.PlaceImageService;
 import com.resernur.api.services.PlaceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,9 @@ public class PlaceController {
 
     @Autowired
     private PlaceService placeService;
+
+    @Autowired
+    private PlaceImageService placeImageService;
 
     @GetMapping
     public ResponseEntity<List<PlaceDTO>> getAllPlaces() {
@@ -52,12 +56,12 @@ public class PlaceController {
 
     @PostMapping(value = "/{placeId}/images", consumes = "multipart/form-data")
     public ResponseEntity<List<PlaceImageResponseDTO>> uploadPlaceImages(@PathVariable int placeId, @RequestParam("images") List<MultipartFile> images) throws IOException {
-        return ResponseEntity.ok(placeService.uploadImages(placeId, images));
+        return ResponseEntity.ok(placeImageService.uploadImages(placeId, images));
     }
 
     @DeleteMapping("/images/{imageId}")
     public ResponseEntity<Void> deletePlaceImage(@PathVariable int imageId) throws IOException {
-        if (placeService.deleteImage(imageId)) {
+        if (placeImageService.deleteImage(imageId)) {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
@@ -65,6 +69,6 @@ public class PlaceController {
 
     @GetMapping("/{placeId}/images")
     public ResponseEntity<List<PlaceImageResponseDTO>> getImagesForPlace(@PathVariable int placeId) {
-        return ResponseEntity.ok(placeService.getImagesForPlace(placeId));
+        return ResponseEntity.ok(placeImageService.getImagesForPlace(placeId));
     }
 }
