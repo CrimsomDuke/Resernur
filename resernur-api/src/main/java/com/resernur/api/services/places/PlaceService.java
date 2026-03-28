@@ -1,10 +1,17 @@
 package com.resernur.api.services.places;
 
 import com.resernur.api.dtos.places.PlaceDTO;
+import com.resernur.api.dtos.pojos.PagedResponse;
+import com.resernur.api.dtos.pojos.SearchQuery;
+import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.places.Place;
+import com.resernur.api.models.enums.PlaceStatus;
 import com.resernur.api.repositories.places.PlaceRepository;
 import com.resernur.api.repositories.users.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,43 +26,63 @@ public class PlaceService {
     @Autowired
     private UserRepository userRepository;
 
-    // CRUD OPERATIONS
-    public List<PlaceDTO> getAllPlaces() {
-        return placeRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+    // Search / List with pagination
+    public PagedResponse<PlaceDTO> searchPlaces(SearchQuery query) {
+        int page = Math.max(0, query == null ? 0 : query.page);
+        int pageSize = Math.max(1, query == null ? 10 : query.pageSize);
+        String term = query == null ? "" : (query.searchTerm == null ? "" : query.searchTerm.trim());
+
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<Place> result = placeRepository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(term, term, pageable);
+
+        List<PlaceDTO> content = result.getContent().stream().map(this::toDTO).collect(Collectors.toList());
+        return new PagedResponse<>(content, result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages(), result.isLast(), true, "");
     }
 
-    public Optional<PlaceDTO> getPlaceById(int id) {
-        return placeRepository.findById(id).map(this::toDTO);
+    // Single retrieval
+    public StandardResult<PlaceDTO> getPlaceByIdStandard(int id) {
+        Optional<Place> opt = placeRepository.findById(id);
+        if (opt.isEmpty()) return new StandardResult<>(false, "Not found", null);
+        return new StandardResult<>(true, "", toDTO(opt.get()));
     }
 
-    public PlaceDTO createPlace(PlaceDTO dto) {
+    // Create
+    public StandardResult<PlaceDTO> createPlaceStandard(PlaceDTO dto) {
         Place place = new Place();
         place.setName(dto.getName());
         place.setDescription(dto.getDescription());
         place.setCapacity(dto.getCapacity());
-        place.setStatus(com.resernur.api.models.enums.PlaceStatus.AVAILABLE);
+        place.setStatus(PlaceStatus.AVAILABLE);
         // Asignar usuario responsable
-        userRepository.findById((long) dto.getUserInChargeId()).ifPresent(place::setUserInCharge);
-        return toDTO(placeRepository.save(place));
+        if (dto.getUserInChargeId() != 0) {
+            userRepository.findById((long) dto.getUserInChargeId()).ifPresent(place::setUserInCharge);
+        }
+        Place saved = placeRepository.save(place);
+        return new StandardResult<>(true, "", toDTO(saved));
     }
 
-    public Optional<PlaceDTO> updatePlace(int id, PlaceDTO dto) {
-        return placeRepository.findById(id).map(place -> {
+    // Update
+    public StandardResult<PlaceDTO> updatePlaceStandard(int id, PlaceDTO dto) {
+        Optional<Place> updated = placeRepository.findById(id).map(place -> {
             place.setName(dto.getName());
             place.setDescription(dto.getDescription());
             place.setCapacity(dto.getCapacity());
-            // Asignar usuario responsable
-            userRepository.findById((long) dto.getUserInChargeId()).ifPresent(place::setUserInCharge);
-            return toDTO(placeRepository.save(place));
+            if (dto.getUserInChargeId() != 0) {
+                userRepository.findById((long) dto.getUserInChargeId()).ifPresent(place::setUserInCharge);
+            }
+            return placeRepository.save(place);
         });
+        if (updated.isPresent()) return new StandardResult<>(true, "", toDTO(updated.get()));
+        return new StandardResult<>(false, "Not found", null);
     }
 
-    public boolean deletePlaceById(int id) {
+    // Delete
+    public StandardResult<Void> deletePlaceStandard(int id) {
         if (placeRepository.existsById(id)) {
             placeRepository.deleteById(id);
-            return true;
+            return new StandardResult<>(true, "", null);
         }
-        return false;
+        return new StandardResult<>(false, "Not found", null);
     }
 
     // DTO MAPPING
@@ -65,9 +92,7 @@ public class PlaceService {
         dto.setName(place.getName());
         dto.setDescription(place.getDescription());
         dto.setCapacity(place.getCapacity());
-        if (place.getUserInCharge() != null) {
-            dto.setUserInChargeId(place.getUserInCharge().getId().intValue());
-        }
+        dto.setUserInChargeId(place.getUserInCharge() != null ? place.getUserInCharge().getId().intValue() : 0);
         return dto;
     }
 }

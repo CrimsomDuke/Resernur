@@ -1,14 +1,14 @@
 package com.resernur.api.controllers.places;
 
 import com.resernur.api.dtos.places.*;
+import com.resernur.api.dtos.pojos.PagedResponse;
+import com.resernur.api.dtos.pojos.SearchQuery;
+import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.services.places.PlaceEquipmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -19,86 +19,84 @@ public class PlaceEquipmentController {
 
     // Create equipment for a place
     @PostMapping("/places/{placeId}/equipment")
-    public ResponseEntity<?> createEquipment(@PathVariable int placeId, @RequestBody PlaceEquipmentCreateDTO dto) {
-        try {
-            dto.setPlaceId(placeId);
-            PlaceEquipmentResponseDTO created = equipmentService.createEquipment(dto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (IllegalArgumentException ex) {
-            String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
-            if (msg.contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-            return ResponseEntity.badRequest().body(ex.getMessage());
+    public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> createEquipment(@PathVariable int placeId, @RequestBody PlaceEquipmentCreateDTO dto) {
+        dto.setPlaceId(placeId);
+        StandardResult<PlaceEquipmentResponseDTO> res = equipmentService.createEquipment(dto);
+        if (!res.isSuccess()) {
+            if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+            return ResponseEntity.badRequest().body(res);
         }
+        return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
     // Update equipment fully
     @PutMapping("/equipment/{equipmentId}")
-    public ResponseEntity<?> updateEquipment(@PathVariable int equipmentId, @RequestBody PlaceEquipmentUpdateDTO dto) {
-        try {
-            PlaceEquipmentResponseDTO updated = equipmentService.updateEquipment(equipmentId, dto);
-            return ResponseEntity.ok(updated);
-        } catch (IllegalArgumentException ex) {
-            String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
-            if (msg.contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-            return ResponseEntity.badRequest().body(ex.getMessage());
+    public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> updateEquipment(@PathVariable int equipmentId, @RequestBody PlaceEquipmentUpdateDTO dto) {
+        StandardResult<PlaceEquipmentResponseDTO> res = equipmentService.updateEquipment(equipmentId, dto);
+        if (!res.isSuccess()) {
+            if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+            return ResponseEntity.badRequest().body(res);
         }
+        return ResponseEntity.ok(res);
     }
 
     // Change state
     @PatchMapping("/equipment/{equipmentId}/state")
-    public ResponseEntity<?> changeState(@PathVariable int equipmentId, @RequestBody ModifyStatusPlaceEquipmentDTO body) {
-        try {
-            String state = body.getStatus().toString();
-            PlaceEquipmentResponseDTO dto = equipmentService.changeState(equipmentId, state);
-            return ResponseEntity.ok(dto);
-        } catch (IllegalArgumentException ex) {
-            String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
-            if (msg.contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-            return ResponseEntity.badRequest().body(ex.getMessage());
+    public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> changeState(@PathVariable int equipmentId, @RequestBody ModifyStatusPlaceEquipmentDTO body) {
+        String state = body.getStatus() != null ? body.getStatus().name() : null;
+        StandardResult<PlaceEquipmentResponseDTO> res = equipmentService.changeState(equipmentId, state);
+        if (!res.isSuccess()) {
+            if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+            return ResponseEntity.badRequest().body(res);
         }
+        return ResponseEntity.ok(res);
     }
 
     // Move equipment
     @PostMapping("/equipment/{equipmentId}/move")
-    public ResponseEntity<?> moveEquipment(@PathVariable int equipmentId, @RequestBody MovePlaceEquipmentDTO body) {
-        try {
-            Integer newPlaceId = body.getNewPlaceId();
-            if (newPlaceId == 0) return ResponseEntity.badRequest().body("newPlaceId is required");
-            PlaceEquipmentResponseDTO dto = equipmentService.moveEquipment(equipmentId, newPlaceId);
-            return ResponseEntity.ok(dto);
-        } catch (IllegalArgumentException ex) {
-            String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
-            if (msg.contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-            return ResponseEntity.badRequest().body(ex.getMessage());
+    public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> moveEquipment(@PathVariable int equipmentId, @RequestBody MovePlaceEquipmentDTO body) {
+        Integer newPlaceId = body.getNewPlaceId();
+        if (newPlaceId == null || newPlaceId == 0) {
+            StandardResult<PlaceEquipmentResponseDTO> bad = new StandardResult<>(false, "newPlaceId is required", null);
+            return ResponseEntity.badRequest().body(bad);
         }
+        StandardResult<PlaceEquipmentResponseDTO> res = equipmentService.moveEquipment(equipmentId, newPlaceId);
+        if (!res.isSuccess()) {
+            if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+            return ResponseEntity.badRequest().body(res);
+        }
+        return ResponseEntity.ok(res);
     }
 
-    // Get all equipments for a place
+    // Get all equipments for a place (paged)
     @GetMapping("/places/{placeId}/equipment")
-    public ResponseEntity<List<PlaceEquipmentResponseDTO>> getEquipmentsByPlace(@PathVariable int placeId) {
-        List<PlaceEquipmentResponseDTO> list = equipmentService.getEquipmentsByPlace(placeId);
-        return ResponseEntity.ok(list);
+    public ResponseEntity<PagedResponse<PlaceEquipmentResponseDTO>> getEquipmentsByPlace(@PathVariable int placeId,
+                                                                                         @RequestParam(value = "page", defaultValue = "0") int page,
+                                                                                         @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+        SearchQuery q = new SearchQuery(null, page, pageSize);
+        return ResponseEntity.ok(equipmentService.getEquipmentsByPlace(placeId, q));
     }
 
     // Modify quantity
     @PatchMapping("/equipment/{equipmentId}/quantity")
-    public ResponseEntity<?> modifyQuantity(@PathVariable int equipmentId, @RequestBody ModifyQuantityPlaceEquipmentDTO body) {
-        try {
-            Integer qty = body.getQuantity();
-            if (qty == 0) return ResponseEntity.badRequest().body("quantity is required");
-            PlaceEquipmentResponseDTO dto = equipmentService.modifyQuantity(equipmentId, qty);
-            return ResponseEntity.ok(dto);
-        } catch (IllegalArgumentException ex) {
-            String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
-            if (msg.contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-            return ResponseEntity.badRequest().body(ex.getMessage());
+    public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> modifyQuantity(@PathVariable int equipmentId, @RequestBody ModifyQuantityPlaceEquipmentDTO body) {
+        Integer qty = body.getQuantity();
+        if (qty == null) {
+            StandardResult<PlaceEquipmentResponseDTO> bad = new StandardResult<>(false, "quantity is required", null);
+            return ResponseEntity.badRequest().body(bad);
         }
+        StandardResult<PlaceEquipmentResponseDTO> res = equipmentService.modifyQuantity(equipmentId, qty);
+        if (!res.isSuccess()) {
+            if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+            return ResponseEntity.badRequest().body(res);
+        }
+        return ResponseEntity.ok(res);
     }
 
     @DeleteMapping("/equipment/{equipmentId}")
-    public ResponseEntity<?> deleteEquipment(@PathVariable int equipmentId) {
-        boolean deleted = equipmentService.deleteEquipment(equipmentId);
-        if (deleted) return ResponseEntity.noContent().build();
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<StandardResult<Void>> deleteEquipment(@PathVariable int equipmentId) {
+        StandardResult<Void> res = equipmentService.deleteEquipment(equipmentId);
+        if (!res.isSuccess()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+        return ResponseEntity.noContent().build();
     }
 }

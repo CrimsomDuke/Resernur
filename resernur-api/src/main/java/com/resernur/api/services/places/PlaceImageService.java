@@ -1,12 +1,18 @@
 package com.resernur.api.services.places;
 
 import com.resernur.api.dtos.places.PlaceImageResponseDTO;
+import com.resernur.api.dtos.pojos.PagedResponse;
+import com.resernur.api.dtos.pojos.SearchQuery;
+import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.places.Place;
 import com.resernur.api.models.places.PlaceImage;
 import com.resernur.api.repositories.places.PlaceImageRepository;
 import com.resernur.api.repositories.places.PlaceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -27,7 +33,7 @@ public class PlaceImageService {
     @Autowired
     private PlaceImageRepository placeImageRepository;
 
-    @Value("${media.images.path}")
+    @Value("${media.images.path:${media.files.path:}}")
     private String imagesPath;
 
     @Value("${app.public-url:}")
@@ -38,9 +44,10 @@ public class PlaceImageService {
 
     private static final long MAX_IMAGE_SIZE = 5L * 1024L * 1024L; // 5 MB
 
-    public List<PlaceImageResponseDTO> uploadImages(int placeId, List<MultipartFile> images) throws IOException {
+    // Upload returns a PagedResponse (list) following API standard
+    public PagedResponse<PlaceImageResponseDTO> uploadImages(int placeId, List<MultipartFile> images) throws IOException {
         Optional<Place> placeOpt = placeRepository.findById(placeId);
-        if (placeOpt.isEmpty()) throw new IllegalArgumentException("Place not found");
+        if (placeOpt.isEmpty()) return new PagedResponse<>(Collections.emptyList(), 0, 0, 0, 0, true, false, "Place not found");
         Place place = placeOpt.get();
         List<PlaceImageResponseDTO> responseList = new ArrayList<>();
 
@@ -69,31 +76,36 @@ public class PlaceImageService {
             dto.setUrl(buildPublicUrl(relativePath));
             responseList.add(dto);
         }
-        return responseList;
+        int size = responseList.size();
+        return new PagedResponse<>(responseList, 0, size, size, 1, true, true, "");
     }
 
-    public boolean deleteImage(int imageId) throws IOException {
+    // Delete returns StandardResult<Void>
+    public StandardResult<Void> deleteImage(int imageId) throws IOException {
         Optional<PlaceImage> imgOpt = placeImageRepository.findById(imageId);
         if (imgOpt.isPresent()) {
             PlaceImage img = imgOpt.get();
             Path filePath = Paths.get(imagesPath, img.getFilePath().replace("/", java.io.File.separator));
             Files.deleteIfExists(filePath);
             placeImageRepository.deleteById(imageId);
-            return true;
+            return new StandardResult<>(true, "", null);
         }
-        return false;
+        return new StandardResult<>(false, "Not found", null);
     }
 
-    public List<PlaceImageResponseDTO> getImagesForPlace(int placeId) {
-        List<PlaceImage> images = placeImageRepository.findByPlace_Id(placeId);
-        return images.stream()
-                .map(img -> {
-                    PlaceImageResponseDTO dto = new PlaceImageResponseDTO();
-                    dto.setId(img.getId());
-                    dto.setUrl(buildPublicUrl(img.getFilePath()));
-                    return dto;
-                })
-                .collect(Collectors.toList());
+    // Get images for place - paginated
+    public PagedResponse<PlaceImageResponseDTO> getImagesForPlace(int placeId, SearchQuery query) {
+        int page = Math.max(0, query == null ? 0 : query.page);
+        int pageSize = Math.max(1, query == null ? 10 : query.pageSize);
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<PlaceImage> pageResult = placeImageRepository.findByPlace_Id(placeId, pageable);
+        List<PlaceImageResponseDTO> content = pageResult.getContent().stream().map(img -> {
+            PlaceImageResponseDTO dto = new PlaceImageResponseDTO();
+            dto.setId(img.getId());
+            dto.setUrl(buildPublicUrl(img.getFilePath()));
+            return dto;
+        }).collect(Collectors.toList());
+        return new PagedResponse<>(content, pageResult.getNumber(), pageResult.getSize(), pageResult.getTotalElements(), pageResult.getTotalPages(), pageResult.isLast(), true, "");
     }
 
     // Helpers
