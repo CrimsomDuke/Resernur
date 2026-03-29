@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class BookingRequestUpdateDTO {
     private int id;
-    private int placeId;
+    private int userId; // requester id for authorization check
     private String reason;
     private LocalDateTime requestedStartTime;
     private LocalDateTime requestedEndTime;

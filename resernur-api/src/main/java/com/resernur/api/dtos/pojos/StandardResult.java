@@ -1,5 +1,8 @@
 package com.resernur.api.dtos.pojos;
 
+import lombok.Data;
+
+@Data
 public class StandardResult<T> {
 
     private boolean success;

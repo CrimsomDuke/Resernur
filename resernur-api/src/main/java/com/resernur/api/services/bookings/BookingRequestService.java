@@ -2,16 +2,20 @@ package com.resernur.api.services.bookings;
 
 import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestDTO;
+import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
+import com.resernur.api.dtos.pojos.PagedResponse;
+import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.bookings.BookingRequest;
-import com.resernur.api.models.bookings.Booking;
 import com.resernur.api.models.enums.BookingRequestStatus;
-import com.resernur.api.models.enums.BookingStatus;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
 import com.resernur.api.repositories.users.UserRepository;
 import com.resernur.api.repositories.places.PlaceRepository;
 import com.resernur.api.services.places.PlaceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,6 +85,96 @@ public class BookingRequestService {
         BookingRequest saved = bookingRequestRepository.save(bookingRequest);
 
         return new StandardResult<>(true, "", toDTO(saved));
+    }
+
+    // Get by id
+    public StandardResult<BookingRequestDTO> getById(int id) {
+        Optional<BookingRequest> opt = bookingRequestRepository.findById(id);
+        if (opt.isEmpty()) return new StandardResult<>(false, "Not found", null);
+        return new StandardResult<>(true, "", toDTO(opt.get()));
+    }
+
+    // Get paged by user
+    public PagedResponse<BookingRequestDTO> getByUserPaged(int userId, SearchQuery query) {
+        int page = Math.max(0, query == null ? 0 : query.page);
+        int pageSize = Math.max(1, query == null ? 10 : query.pageSize);
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<BookingRequest> pageResult = bookingRequestRepository.findAllByUserId(userId, pageable);
+        var content = pageResult.getContent().stream().map(this::toDTO).collect(Collectors.toList());
+        return new PagedResponse<>(content, pageResult.getNumber(), pageResult.getSize(), pageResult.getTotalElements(), pageResult.getTotalPages(), pageResult.isLast(), true, "");
+    }
+
+    // Get all paged, optional filter by status
+    public PagedResponse<BookingRequestDTO> getAllPaged(SearchQuery query, BookingRequestStatus status) {
+        int page = Math.max(0, query == null ? 0 : query.page);
+        int pageSize = Math.max(1, query == null ? 10 : query.pageSize);
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<BookingRequest> pageResult;
+        if (status == null) {
+            pageResult = bookingRequestRepository.findAll(pageable);
+        } else {
+            pageResult = bookingRequestRepository.findByStatus(status, pageable);
+        }
+        var content = pageResult.getContent().stream().map(this::toDTO).collect(Collectors.toList());
+        return new PagedResponse<>(content, pageResult.getNumber(), pageResult.getSize(), pageResult.getTotalElements(), pageResult.getTotalPages(), pageResult.isLast(), true, "");
+    }
+
+    // Update by requester: can change time interval and reason
+    @Transactional
+    public StandardResult<BookingRequestDTO> updateByRequester(int id, BookingRequestUpdateDTO dto) {
+        Optional<BookingRequest> opt = bookingRequestRepository.findById(id);
+        if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
+        BookingRequest req = opt.get();
+        // Check ownership
+        if (req.getUser() == null || req.getUser().getId().intValue() != dto.getUserId()) {
+            return new StandardResult<>(false, "Unauthorized: only the requester can update this booking request", null);
+        }
+        // Only allow updates when not accepted
+        if (req.getStatus() == BookingRequestStatus.ACCEPTED) {
+            return new StandardResult<>(false, "Cannot modify an accepted request", null);
+        }
+        // Validate dates if provided
+        if (dto.getRequestedStartTime() != null && dto.getRequestedEndTime() != null) {
+            if (dto.getRequestedStartTime().isAfter(dto.getRequestedEndTime())) {
+                return new StandardResult<>(false, "Start time must be before end time", null);
+            }
+            // Check overlaps with accepted bookings
+            List<BookingRequestStatus> checkStatuses = List.of(BookingRequestStatus.ACCEPTED);
+            var overlaps = bookingRequestRepository.findByPlace_IdAndStatusInAndRequestedStartTimeLessThanEqualAndRequestedEndTimeGreaterThanEqual(
+                    req.getPlace().getId(), checkStatuses, dto.getRequestedEndTime(), dto.getRequestedStartTime()
+            );
+            // exclude self
+            boolean conflict = overlaps.stream().anyMatch(r -> r.getId() != req.getId());
+            if (conflict) {
+                return new StandardResult<>(false, "Requested time conflicts with an existing accepted booking", null);
+            }
+            req.setRequestedStartTime(dto.getRequestedStartTime());
+            req.setRequestedEndTime(dto.getRequestedEndTime());
+        }
+        if (dto.getReason() != null) req.setReason(dto.getReason());
+        // After update, set status back to PENDING
+        req.setStatus(BookingRequestStatus.PENDING);
+        BookingRequest saved = bookingRequestRepository.save(req);
+        return new StandardResult<>(true, "", toDTO(saved));
+    }
+
+    // Delete request (owner can delete)
+    @Transactional
+    public StandardResult<Void> deleteRequest(int id, int requesterId) {
+        Optional<BookingRequest> opt = bookingRequestRepository.findById(id);
+        if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
+        BookingRequest req = opt.get();
+        if (req.getUser() == null || req.getUser().getId().intValue() != requesterId) {
+            return new StandardResult<>(false, "Unauthorized: only the requester can delete this booking request", null);
+        }
+        bookingRequestRepository.deleteById(id);
+        return new StandardResult<>(true, "", null);
+    }
+
+    // Backward-compatible alias: controller calls `delete(id, requesterId)`
+    @Transactional
+    public StandardResult<Void> delete(int id, int requesterId) {
+        return deleteRequest(id, requesterId);
     }
 
     // Accept a booking request: mark accepted, create Booking (TODO), reject overlapping requests and notify (TODO)
@@ -157,7 +251,7 @@ public class BookingRequestService {
         dto.setChangesRequestedReason(bookingRequest.getChangesRequestedReason());
         // attachment file id exposure
         if (bookingRequest.getAttachmentFile() != null) dto.setAttachmentFileId(bookingRequest.getAttachmentFile().getId());
-         return dto;
+        return dto;
     }
 
 }

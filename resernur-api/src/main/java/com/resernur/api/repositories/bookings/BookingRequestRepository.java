@@ -19,4 +19,7 @@ public interface BookingRequestRepository extends JpaRepository<BookingRequest, 
             LocalDateTime endTime,
             LocalDateTime startTime
     );
+
+    Page<BookingRequest> findByStatus(BookingRequestStatus status, Pageable pageable);
 }
+
