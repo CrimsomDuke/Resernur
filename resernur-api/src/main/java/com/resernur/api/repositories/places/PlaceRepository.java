@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PlaceRepository extends JpaRepository<Place, Integer> {
-    // Paginated search by name or description
+    // Resulta que el fucking springboot lee bastante bien estos nombres
+    // de metodos y aplica la logica de busqueda sin necesidad de escribir queries manuales
     Page<Place> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(String name, String description, Pageable pageable);
 }

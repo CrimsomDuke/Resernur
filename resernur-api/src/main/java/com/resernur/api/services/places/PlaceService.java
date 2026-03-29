@@ -26,7 +26,6 @@ public class PlaceService {
     @Autowired
     private UserRepository userRepository;
 
-    // Search / List with pagination
     public PagedResponse<PlaceDTO> searchPlaces(SearchQuery query) {
         int page = Math.max(0, query == null ? 0 : query.page);
         int pageSize = Math.max(1, query == null ? 10 : query.pageSize);
