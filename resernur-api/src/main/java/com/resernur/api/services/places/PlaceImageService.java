@@ -33,7 +33,7 @@ public class PlaceImageService {
     @Autowired
     private PlaceImageRepository placeImageRepository;
 
-    @Value("${media.images.path:${media.files.path:}}")
+    @Value("${media.images.path:${media.images.path:}}")
     private String imagesPath;
 
     @Value("${app.public-url:}")

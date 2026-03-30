@@ -2,6 +2,7 @@
 package com.resernur.api.models.files;
 
 import com.resernur.api.models.bookings.Booking;
+import com.resernur.api.models.bookings.BookingRequest;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,10 +22,5 @@ public class File {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime uploadedAt = LocalDateTime.now();
-
-    @ManyToOne
-    @JoinColumn(name = "bookingId", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_file_booking"))
-    private Booking booking;
-
     // Getters and setters
 }

@@ -10,6 +10,7 @@ import com.resernur.api.models.enums.BookingRequestStatus;
 import com.resernur.api.services.bookings.BookingRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,8 +21,8 @@ public class BookingRequestController {
     @Autowired
     private BookingRequestService bookingRequestService;
 
-    @PostMapping
-    public ResponseEntity<StandardResult<BookingRequestDTO>> create(@RequestBody BookingRequestCreateDTO dto) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StandardResult<BookingRequestDTO>> create(@ModelAttribute BookingRequestCreateDTO dto) {
         var res = bookingRequestService.createBookingRequest(dto);
         if (!res.isSuccess()) return ResponseEntity.badRequest().body(res);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);

@@ -8,9 +8,11 @@ import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.BookingRequestStatus;
+import com.resernur.api.models.files.File;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
 import com.resernur.api.repositories.users.UserRepository;
 import com.resernur.api.repositories.places.PlaceRepository;
+import com.resernur.api.services.files.FileService;
 import com.resernur.api.services.places.PlaceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -37,6 +39,9 @@ public class BookingRequestService {
 
     @Autowired
     private PlaceService placeService;
+
+    @Autowired
+    private FileService fileService;
 
     // Create booking request with overlap validation
     @Transactional
@@ -81,6 +86,22 @@ public class BookingRequestService {
         bookingRequest.setRequestedStartTime(dto.getRequestedStartTime());
         bookingRequest.setRequestedEndTime(dto.getRequestedEndTime());
         bookingRequest.setReason(dto.getReason());
+
+        //handle file oh yeah
+        if(dto.getAttachmentFile() != null){
+            StandardResult<File> fileResult;
+            try{
+                fileResult = fileService.saveFile(dto.getAttachmentFile());
+            }catch (Exception ex){
+                return new StandardResult<>(false, "Failed to save attachment file: " + ex.getMessage(), null);
+            }
+
+            if (!fileResult.isSuccess()) {
+                return new StandardResult<>(false, "Failed to save attachment file: " + fileResult.getErrorMessage(), null);
+            }
+
+            bookingRequest.setAttachmentFile(fileResult.getData());
+        }
 
         BookingRequest saved = bookingRequestRepository.save(bookingRequest);
 

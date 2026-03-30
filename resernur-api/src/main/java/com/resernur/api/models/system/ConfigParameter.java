@@ -1,4 +1,4 @@
-package com.resernur.api.models.bookings;
+package com.resernur.api.models.system;
 
 import jakarta.persistence.*;
 @Entity
