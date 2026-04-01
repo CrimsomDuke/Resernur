@@ -1,6 +1,7 @@
 package com.resernur.api.services.bookings;
 
 import com.resernur.api.dtos.bookings.BookingDTO;
+import com.resernur.api.dtos.bookings.BookingRequestDTO;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
@@ -26,9 +27,6 @@ public class BookingService {
 
     @Autowired
     private BookingRepository bookingRepository;
-
-    @Autowired
-    private BookingRequestService bookingRequestService;
 
     // Create a booking from an accepted BookingRequest
     @Transactional
@@ -109,6 +107,24 @@ public class BookingService {
         dto.setStartTime(b.getStartTime());
         dto.setEndTime(b.getEndTime());
         dto.setStatus(b.getStatus());
+
+        dto.setBookingRequest(b.getBookingRequest() != null ? toBookingRequestDTO(b.getBookingRequest()) : null);
+        return dto;
+    }
+
+    private BookingRequestDTO toBookingRequestDTO(BookingRequest bookingRequest) {
+        BookingRequestDTO dto = new BookingRequestDTO();
+        dto.setId(bookingRequest.getId());
+        dto.setUserId(bookingRequest.getUser().getId().intValue());
+        dto.setPlaceId(bookingRequest.getPlace() != null ? bookingRequest.getPlace().getId() : 0);
+        dto.setReason(bookingRequest.getReason());
+        dto.setStatus(bookingRequest.getStatus());
+        dto.setRequestedAt(bookingRequest.getRequestedAt());
+        dto.setRequestedStartTime(bookingRequest.getRequestedStartTime());
+        dto.setRequestedEndTime(bookingRequest.getRequestedEndTime());
+        dto.setChangesRequestedReason(bookingRequest.getChangesRequestedReason());
+        // attachment file id exposure
+        if (bookingRequest.getAttachmentFile() != null) dto.setAttachmentFileId(bookingRequest.getAttachmentFile().getId());
         return dto;
     }
 

@@ -1,4 +1,4 @@
-﻿package com.resernur.api.repositories.bookings;
+package com.resernur.api.repositories.bookings;
 
 import com.resernur.api.models.bookings.Booking;
 import com.resernur.api.models.enums.BookingStatus;

@@ -1,5 +1,6 @@
 package com.resernur.api.services.bookings;
 
+import com.resernur.api.dtos.bookings.BookingDTO;
 import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
@@ -30,6 +31,9 @@ public class BookingRequestService {
 
     @Autowired
     private BookingRequestRepository bookingRequestRepository;
+
+    @Autowired
+    private BookingService bookingService;
 
     @Autowired
     private UserRepository userRepository;
@@ -216,9 +220,6 @@ public class BookingRequestService {
         req.setStatus(BookingRequestStatus.ACCEPTED);
         bookingRequestRepository.save(req);
 
-        // TODO: Create Booking entity (BookingRepository/Service not implemented yet)
-        // Example (to be implemented): bookingService.createBookingFromRequest(req);
-
         // Find overlapping requests and mark them as REJECTED, notify users (TODO NotificationService)
         List<BookingRequestStatus> checkStatuses = List.of(BookingRequestStatus.PENDING, BookingRequestStatus.CHANGES_REQUESTED);
         var overlaps = bookingRequestRepository.findByPlace_IdAndStatusInAndRequestedStartTimeLessThanEqualAndRequestedEndTimeGreaterThanEqual(
@@ -233,6 +234,12 @@ public class BookingRequestService {
                 // TODO: notify user r.getUser() via NotificationService
             }
         }
+
+
+        //Crear el booking
+        StandardResult<BookingDTO> resBooking = bookingService.createBookingFromRequest(req);
+        if(resBooking.isSuccess() == false) return new StandardResult<>(false, "Failed to create booking from accepted request: " + resBooking.getErrorMessage(), toDTO(req));
+
 
         return new StandardResult<>(true, "", toDTO(req));
     }
