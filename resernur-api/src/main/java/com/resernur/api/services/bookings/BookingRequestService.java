@@ -146,6 +146,12 @@ public class BookingRequestService {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(id);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
+
+        //Only can update on changesReqeestedd
+        if(req.getStatus() != BookingRequestStatus.CHANGES_REQUESTED){
+            return new StandardResult<>(false, "Only requests with status 'CHANGES_REQUESTED' can be updated by the requester", null);
+        }
+
         // Check ownership
         if (req.getUser() == null || req.getUser().getId().intValue() != dto.getUserId()) {
             return new StandardResult<>(false, "Unauthorized: only the requester can update this booking request", null);

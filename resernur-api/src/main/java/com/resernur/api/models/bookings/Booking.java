@@ -3,9 +3,14 @@ package com.resernur.api.models.bookings;
 import com.resernur.api.models.enums.BookingStatus;
 import com.resernur.api.models.places.Place;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
+@Getter
+@Setter
 public class Booking {
 
     @Id
