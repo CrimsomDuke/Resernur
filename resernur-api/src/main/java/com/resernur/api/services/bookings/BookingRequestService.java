@@ -13,6 +13,7 @@ import com.resernur.api.models.files.File;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
 import com.resernur.api.repositories.users.UserRepository;
 import com.resernur.api.repositories.places.PlaceRepository;
+import com.resernur.api.services.NotificationService;
 import com.resernur.api.services.files.FileService;
 import com.resernur.api.services.places.PlaceService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,9 @@ public class BookingRequestService {
 
     @Autowired
     private FileService fileService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     // Create booking request with overlap validation
     @Transactional
@@ -108,6 +112,7 @@ public class BookingRequestService {
         }
 
         BookingRequest saved = bookingRequestRepository.save(bookingRequest);
+        notificationService.createNotification((long) dto.getUserId(), "Your booking request has been created and is pending review");
 
         return new StandardResult<>(true, "", toDTO(saved));
     }
@@ -231,7 +236,7 @@ public class BookingRequestService {
                 r.setStatus(BookingRequestStatus.REJECTED);
                 r.setChangesRequestedReason("Automatically rejected because another request was accepted for the same time");
                 bookingRequestRepository.save(r);
-                // TODO: notify user r.getUser() via NotificationService
+                notificationService.createNotification(req.getUser().getId(), "Your booking request has been rejected because another request was accepted for the same time");
             }
         }
 
@@ -240,6 +245,7 @@ public class BookingRequestService {
         StandardResult<BookingDTO> resBooking = bookingService.createBookingFromRequest(req);
         if(resBooking.isSuccess() == false) return new StandardResult<>(false, "Failed to create booking from accepted request: " + resBooking.getErrorMessage(), toDTO(req));
 
+        notificationService.createNotification(req.getUser().getId(), "Your booking request has been accepted and a booking has been created");
 
         return new StandardResult<>(true, "", toDTO(req));
     }
@@ -253,8 +259,10 @@ public class BookingRequestService {
         BookingRequest req = opt.get();
         req.setStatus(BookingRequestStatus.REJECTED);
         req.setChangesRequestedReason(reason);
+
         bookingRequestRepository.save(req);
-        // TODO: notify user about rejection via NotificationService
+        notificationService.createNotification(req.getUser().getId(), "Your booking request has been rejected. Reason: " + reason);
+
         return new StandardResult<>(true, "", toDTO(req));
     }
 
@@ -268,7 +276,7 @@ public class BookingRequestService {
         req.setStatus(BookingRequestStatus.CHANGES_REQUESTED);
         req.setChangesRequestedReason(reason);
         bookingRequestRepository.save(req);
-        // TODO: notify user about requested changes via NotificationService
+        notificationService.createNotification(req.getUser().getId(), "Changes have been requested for your booking request. Reason: " + reason);
         return new StandardResult<>(true, "", toDTO(req));
     }
 
