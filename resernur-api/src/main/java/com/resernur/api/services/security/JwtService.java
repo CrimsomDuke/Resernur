@@ -30,7 +30,11 @@ public class JwtService {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", userDetails.getAuthorities());
+
+        // Grab the first authority string (e.g., "ROLE_ADMINISTRADOR")
+        String roleName = userDetails.getAuthorities().iterator().next().getAuthority();
+        extraClaims.put("role", roleName);
+
         return buildToken(extraClaims, userDetails, jwtExpiration);
     }
 

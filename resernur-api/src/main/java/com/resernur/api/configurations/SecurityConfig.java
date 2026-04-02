@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,6 +16,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+//@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -27,21 +29,23 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Already disabled
                 .cors(Customizer.withDefaults()) // Recommended for React frontend
 
-                /* // Reglas de autorización: permitir acceso público a /media/** y auth/docs; exigir auth al resto
+                // Reglas de autorización: permitir acceso público a /media/** y auth/docs; exigir auth al resto
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/media/**",
                                 "/api/auth/**",
-                                "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/api/docs/**"
+                                "/api/swagger-ui/**",
+                                "/api/docs/**",
+                                "/v3/api-docs/**",     // <--- THIS IS THE ONE MISSING
+                                "/v3/api-docs.yaml"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                */
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 // --- ADD THESE LINES TO DEACTIVATE THE BUILT-IN UI ---
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())

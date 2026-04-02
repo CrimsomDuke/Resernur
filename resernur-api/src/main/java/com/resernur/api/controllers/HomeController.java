@@ -9,7 +9,7 @@ import java.util.Map;
 
 @RestController
 public class HomeController {
-    @GetMapping("/api/")
+    @GetMapping("/api")
     @RequiresAnyRole(roles = {"SOLICITANTE", "ADMINISTRADOR", "ENCARGADO"})
     public Map<String, String> home() {
         return Map.of(
@@ -18,6 +18,7 @@ public class HomeController {
     }
 
     //prueba sin roles
+    @GetMapping("/api/test")
     public Map<String, String> test(){
         return Map.of(
                 "message", "Bienvenido a la api de ReserNUR sin roles"
