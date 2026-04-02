@@ -5,6 +5,7 @@ import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.services.places.PlaceEquipmentService;
+import com.resernur.api.utils.aspect.RequiresAnyRole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ public class PlaceEquipmentController {
 
     // Create equipment for a place
     @PostMapping("/places/{placeId}/equipment")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> createEquipment(@PathVariable int placeId, @RequestBody PlaceEquipmentCreateDTO dto) {
         dto.setPlaceId(placeId);
         StandardResult<PlaceEquipmentResponseDTO> res = equipmentService.createEquipment(dto);
@@ -31,6 +33,7 @@ public class PlaceEquipmentController {
 
     // Update equipment fully
     @PutMapping("/equipment/{equipmentId}")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> updateEquipment(@PathVariable int equipmentId, @RequestBody PlaceEquipmentUpdateDTO dto) {
         StandardResult<PlaceEquipmentResponseDTO> res = equipmentService.updateEquipment(equipmentId, dto);
         if (!res.isSuccess()) {
@@ -42,6 +45,7 @@ public class PlaceEquipmentController {
 
     // Change state
     @PatchMapping("/equipment/{equipmentId}/state")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> changeState(@PathVariable int equipmentId, @RequestBody ModifyStatusPlaceEquipmentDTO body) {
         String state = body.getStatus() != null ? body.getStatus().name() : null;
         StandardResult<PlaceEquipmentResponseDTO> res = equipmentService.changeState(equipmentId, state);
@@ -54,6 +58,7 @@ public class PlaceEquipmentController {
 
     // Move equipment
     @PostMapping("/equipment/{equipmentId}/move")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> moveEquipment(@PathVariable int equipmentId, @RequestBody MovePlaceEquipmentDTO body) {
         Integer newPlaceId = body.getNewPlaceId();
         if (newPlaceId == null || newPlaceId == 0) {
@@ -79,6 +84,7 @@ public class PlaceEquipmentController {
 
     // Modify quantity
     @PatchMapping("/equipment/{equipmentId}/quantity")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> modifyQuantity(@PathVariable int equipmentId, @RequestBody ModifyQuantityPlaceEquipmentDTO body) {
         Integer qty = body.getQuantity();
         if (qty == null) {
@@ -94,6 +100,7 @@ public class PlaceEquipmentController {
     }
 
     @DeleteMapping("/equipment/{equipmentId}")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<Void>> deleteEquipment(@PathVariable int equipmentId) {
         StandardResult<Void> res = equipmentService.deleteEquipment(equipmentId);
         if (!res.isSuccess()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);

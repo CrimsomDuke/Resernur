@@ -1,4 +1,4 @@
-package com.resernur.api.controllers.handlers;
+package com.resernur.api.handlers;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

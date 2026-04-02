@@ -10,10 +10,17 @@ import java.util.Map;
 @RestController
 public class HomeController {
     @GetMapping("/api/")
-    @RequiresAnyRole(roles = {"SOLICITANTE", "ADMINISTRADOR"})
+    @RequiresAnyRole(roles = {"SOLICITANTE", "ADMINISTRADOR", "ENCARGADO"})
     public Map<String, String> home() {
         return Map.of(
                 "message", "Bienvenido a la api de ReserNUR"
+        );
+    }
+
+    //prueba sin roles
+    public Map<String, String> test(){
+        return Map.of(
+                "message", "Bienvenido a la api de ReserNUR sin roles"
         );
     }
 }

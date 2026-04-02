@@ -8,6 +8,7 @@ import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.enums.BookingRequestStatus;
 import com.resernur.api.services.bookings.BookingRequestService;
+import com.resernur.api.utils.aspect.RequiresAnyRole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -60,6 +61,7 @@ public class BookingRequestController {
     }
 
     @PostMapping("/{id}/accept")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<BookingRequestDTO>> accept(@PathVariable int id) {
         var res = bookingRequestService.acceptRequest(id);
         if (!res.isSuccess()) {
@@ -70,6 +72,7 @@ public class BookingRequestController {
     }
 
     @PostMapping("/{id}/reject")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<BookingRequestDTO>> reject(@PathVariable int id, @RequestBody ReasonBody body) {
         var res = bookingRequestService.rejectRequest(id, body.reason);
         if (!res.isSuccess()) {
@@ -80,6 +83,7 @@ public class BookingRequestController {
     }
 
     @PostMapping("/{id}/request-changes")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<BookingRequestDTO>> requestChanges(@PathVariable int id, @RequestBody ReasonBody body) {
         var res = bookingRequestService.requestChanges(id, body.reason);
         if (!res.isSuccess()) {

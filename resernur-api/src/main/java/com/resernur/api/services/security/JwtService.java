@@ -30,7 +30,6 @@ public class JwtService {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
-        // Requirement: Add the Role to the token for Role-Based Auth [cite: 56]
         extraClaims.put("role", userDetails.getAuthorities());
         return buildToken(extraClaims, userDetails, jwtExpiration);
     }

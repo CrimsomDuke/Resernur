@@ -6,6 +6,7 @@ import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.enums.BookingStatus;
 import com.resernur.api.services.bookings.BookingService;
+import com.resernur.api.utils.aspect.RequiresAnyRole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +48,7 @@ public class BookingController {
     }
 
     @PostMapping("/{id}/cancel")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<Void>> cancel(@PathVariable int id) {
         var res = bookingService.cancelBooking(id);
         if (!res.isSuccess()) {
