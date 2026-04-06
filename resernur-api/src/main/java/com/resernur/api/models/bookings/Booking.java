@@ -1,5 +1,6 @@
 package com.resernur.api.models.bookings;
 
+import com.resernur.api.models.enums.ActivityType;
 import com.resernur.api.models.enums.BookingStatus;
 import com.resernur.api.models.places.Place;
 import jakarta.persistence.*;
@@ -32,6 +33,9 @@ public class Booking {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BookingStatus status = BookingStatus.COMPLETED;
+
+    @Column
+    private ActivityType activityType;
 
     // Getters and setters
 }

@@ -1,5 +1,6 @@
 package com.resernur.api.dtos.bookings;
 
+import com.resernur.api.models.enums.ActivityType;
 import com.resernur.api.models.enums.BookingRequestStatus;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -12,6 +13,7 @@ public class BookingRequestCreateDTO {
     private int userId;
     private int placeId;
     private String reason;
+    private ActivityType activityType;
 
     @DateTimeFormat(iso =  DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime requestedStartTime;

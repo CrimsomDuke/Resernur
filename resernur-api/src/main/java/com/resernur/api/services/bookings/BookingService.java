@@ -7,9 +7,11 @@ import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.bookings.Booking;
 import com.resernur.api.models.bookings.BookingRequest;
+import com.resernur.api.models.enums.Actions;
 import com.resernur.api.models.enums.BookingRequestStatus;
 import com.resernur.api.models.enums.BookingStatus;
 import com.resernur.api.repositories.bookings.BookingRepository;
+import com.resernur.api.services.auditlogs.LogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +30,9 @@ public class BookingService {
     @Autowired
     private BookingRepository bookingRepository;
 
+    @Autowired
+    private LogService logService;
+
     // Create a booking from an accepted BookingRequest
     @Transactional
     public StandardResult<BookingDTO> createBookingFromRequest(BookingRequest request) {
@@ -39,7 +44,9 @@ public class BookingService {
         b.setPlace(request.getPlace());
         b.setStartTime(request.getRequestedStartTime());
         b.setEndTime(request.getRequestedEndTime());
+        b.setActivityType(request.getActivityType());
         b.setStatus(BookingStatus.COMPLETED);
+
         Booking saved = bookingRepository.save(b);
         return new StandardResult<>(true, "", toDTO(saved));
     }

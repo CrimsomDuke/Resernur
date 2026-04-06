@@ -8,12 +8,14 @@ import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.bookings.BookingRequest;
+import com.resernur.api.models.enums.Actions;
 import com.resernur.api.models.enums.BookingRequestStatus;
 import com.resernur.api.models.files.File;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
 import com.resernur.api.repositories.users.UserRepository;
 import com.resernur.api.repositories.places.PlaceRepository;
 import com.resernur.api.services.NotificationService;
+import com.resernur.api.services.auditlogs.LogService;
 import com.resernur.api.services.files.FileService;
 import com.resernur.api.services.places.PlaceService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,9 +53,13 @@ public class BookingRequestService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private LogService logService;
+
+
     // Create booking request with overlap validation
     @Transactional
-    public StandardResult<BookingRequestDTO> createBookingRequest(BookingRequestCreateDTO dto) {
+    public StandardResult<BookingRequestDTO> createBookingRequest(BookingRequestCreateDTO dto, int userId) {
         // Validar datos de entrada
         if (dto.getUserId() == 0 || dto.getPlaceId() == 0 || dto.getRequestedStartTime() == null || dto.getRequestedEndTime() == null) {
             return new StandardResult<>(false, "Missing required fields", null);
@@ -114,6 +120,8 @@ public class BookingRequestService {
         BookingRequest saved = bookingRequestRepository.save(bookingRequest);
         notificationService.createNotification((long) dto.getUserId(), "Your booking request has been created and is pending review");
 
+        logService.logAction(Actions.CREATE, userId, "BOOKING_REQUEST", saved.getId());
+
         return new StandardResult<>(true, "", toDTO(saved));
     }
 
@@ -151,7 +159,7 @@ public class BookingRequestService {
 
     // Update by requester: can change time interval and reason
     @Transactional
-    public StandardResult<BookingRequestDTO> updateByRequester(int id, BookingRequestUpdateDTO dto) {
+    public StandardResult<BookingRequestDTO> updateByRequester(int id, BookingRequestUpdateDTO dto, int userId) {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(id);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
@@ -191,6 +199,10 @@ public class BookingRequestService {
         // After update, set status back to PENDING
         req.setStatus(BookingRequestStatus.PENDING);
         BookingRequest saved = bookingRequestRepository.save(req);
+
+
+        logService.logAction(Actions.UPDATE, userId, "BOOKING_REQUEST", saved.getId());
+
         return new StandardResult<>(true, "", toDTO(saved));
     }
 
@@ -215,7 +227,7 @@ public class BookingRequestService {
 
     // Accept a booking request: mark accepted, create Booking (TODO), reject overlapping requests and notify (TODO)
     @Transactional
-    public StandardResult<BookingRequestDTO> acceptRequest(int requestId) {
+    public StandardResult<BookingRequestDTO> acceptRequest(int requestId, int userId) {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
@@ -247,12 +259,14 @@ public class BookingRequestService {
 
         notificationService.createNotification(req.getUser().getId(), "Your booking request has been accepted and a booking has been created");
 
+        logService.logAction(Actions.APPROVE, userId, "BOOKING_REQUEST", resBooking.getData().getBookingRequestId());
+
         return new StandardResult<>(true, "", toDTO(req));
     }
 
     // Reject a booking request with a reason
     @Transactional
-    public StandardResult<BookingRequestDTO> rejectRequest(int requestId, String reason) {
+    public StandardResult<BookingRequestDTO> rejectRequest(int requestId, String reason, int userId) {
         if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Rejection reason is required", null);
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
@@ -263,12 +277,15 @@ public class BookingRequestService {
         bookingRequestRepository.save(req);
         notificationService.createNotification(req.getUser().getId(), "Your booking request has been rejected. Reason: " + reason);
 
+
+        logService.logAction(Actions.REJECT, userId, "BOOKING_REQUEST", req.getId());
+
         return new StandardResult<>(true, "", toDTO(req));
     }
 
     // Request changes for a booking request
     @Transactional
-    public StandardResult<BookingRequestDTO> requestChanges(int requestId, String reason) {
+    public StandardResult<BookingRequestDTO> requestChanges(int requestId, String reason, int userId) {
         if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Reason is required", null);
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
@@ -277,6 +294,10 @@ public class BookingRequestService {
         req.setChangesRequestedReason(reason);
         bookingRequestRepository.save(req);
         notificationService.createNotification(req.getUser().getId(), "Changes have been requested for your booking request. Reason: " + reason);
+
+
+        logService.logAction(Actions.REJECT, userId, "BOOKING_REQUEST", req.getId());
+
         return new StandardResult<>(true, "", toDTO(req));
     }
 

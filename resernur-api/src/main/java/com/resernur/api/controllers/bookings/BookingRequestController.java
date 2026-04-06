@@ -7,12 +7,14 @@ import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.enums.BookingRequestStatus;
+import com.resernur.api.models.users.User;
 import com.resernur.api.services.bookings.BookingRequestService;
 import com.resernur.api.utils.aspect.RequiresAnyRole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,8 +25,9 @@ public class BookingRequestController {
     private BookingRequestService bookingRequestService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<StandardResult<BookingRequestDTO>> create(@ModelAttribute BookingRequestCreateDTO dto) {
-        var res = bookingRequestService.createBookingRequest(dto);
+    public ResponseEntity<StandardResult<BookingRequestDTO>> create(@ModelAttribute BookingRequestCreateDTO dto,
+                                                                    @AuthenticationPrincipal User user) {
+        var res = bookingRequestService.createBookingRequest(dto, user.getId().intValue());
         if (!res.isSuccess()) return ResponseEntity.badRequest().body(res);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
@@ -62,8 +65,8 @@ public class BookingRequestController {
 
     @PostMapping("/{id}/accept")
     @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
-    public ResponseEntity<StandardResult<BookingRequestDTO>> accept(@PathVariable int id) {
-        var res = bookingRequestService.acceptRequest(id);
+    public ResponseEntity<StandardResult<BookingRequestDTO>> accept(@PathVariable int id, @AuthenticationPrincipal User user) {
+        var res = bookingRequestService.acceptRequest(id, user.getId().intValue());
         if (!res.isSuccess()) {
             if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
             return ResponseEntity.badRequest().body(res);
@@ -73,8 +76,9 @@ public class BookingRequestController {
 
     @PostMapping("/{id}/reject")
     @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
-    public ResponseEntity<StandardResult<BookingRequestDTO>> reject(@PathVariable int id, @RequestBody ReasonBody body) {
-        var res = bookingRequestService.rejectRequest(id, body.reason);
+    public ResponseEntity<StandardResult<BookingRequestDTO>> reject(@PathVariable int id, @RequestBody ReasonBody body,
+                                                                    @AuthenticationPrincipal User user) {
+        var res = bookingRequestService.rejectRequest(id, body.reason, user.getId().intValue());
         if (!res.isSuccess()) {
             if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
             return ResponseEntity.badRequest().body(res);
@@ -84,8 +88,9 @@ public class BookingRequestController {
 
     @PostMapping("/{id}/request-changes")
     @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
-    public ResponseEntity<StandardResult<BookingRequestDTO>> requestChanges(@PathVariable int id, @RequestBody ReasonBody body) {
-        var res = bookingRequestService.requestChanges(id, body.reason);
+    public ResponseEntity<StandardResult<BookingRequestDTO>> requestChanges(@PathVariable int id, @RequestBody ReasonBody body,
+                                                                            @AuthenticationPrincipal User user) {
+        var res = bookingRequestService.requestChanges(id, body.reason, user.getId().intValue());
         if (!res.isSuccess()) {
             if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
             return ResponseEntity.badRequest().body(res);
@@ -94,9 +99,10 @@ public class BookingRequestController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<StandardResult<BookingRequestDTO>> updateByRequester(@PathVariable int id, @RequestBody BookingRequestUpdateDTO dto) {
+    public ResponseEntity<StandardResult<BookingRequestDTO>> updateByRequester(@PathVariable int id, @RequestBody BookingRequestUpdateDTO dto,
+                                                                               @AuthenticationPrincipal User user) {
         if (dto.getId() != id) dto.setId(id);
-        var res = bookingRequestService.updateByRequester(id, dto);
+        var res = bookingRequestService.updateByRequester(id, dto, user.getId().intValue());
         if (!res.isSuccess()) {
             if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
             if (res.getErrorMessage().toLowerCase().contains("unauthorized")) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(res);

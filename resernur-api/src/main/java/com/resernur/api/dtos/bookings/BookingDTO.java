@@ -1,5 +1,6 @@
 package com.resernur.api.dtos.bookings;
 
+import com.resernur.api.models.enums.ActivityType;
 import com.resernur.api.models.enums.BookingStatus;
 import lombok.Data;
 
@@ -14,5 +15,6 @@ public class BookingDTO {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private BookingStatus status;
+    private ActivityType activityType;
 }
 

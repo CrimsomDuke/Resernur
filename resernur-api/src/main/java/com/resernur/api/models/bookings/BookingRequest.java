@@ -1,5 +1,6 @@
 package com.resernur.api.models.bookings;
 
+import com.resernur.api.models.enums.ActivityType;
 import com.resernur.api.models.files.File;
 import com.resernur.api.models.enums.BookingRequestStatus;
 import com.resernur.api.models.places.Place;
@@ -49,5 +50,8 @@ public class BookingRequest {
 
     @Column(nullable = true)
     private String changesRequestedReason; // only visible when status is "CHANGES_REQUESTED"
+
+    @Column
+    private ActivityType activityType = ActivityType.ACADEMICO;
 
 }
