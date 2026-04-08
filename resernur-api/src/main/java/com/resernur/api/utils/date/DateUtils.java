@@ -1,4 +1,4 @@
-﻿package com.resernur.api.utils.date;
+package com.resernur.api.utils.date;
 
 import java.time.LocalDateTime;
 import java.util.Date;

@@ -1,4 +1,4 @@
-﻿package com.resernur.api.utils.date;
+package com.resernur.api.utils.date;
 
 import lombok.Data;
 
