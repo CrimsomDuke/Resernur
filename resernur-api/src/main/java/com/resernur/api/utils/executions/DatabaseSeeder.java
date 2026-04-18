@@ -1,11 +1,15 @@
 package com.resernur.api.utils.executions;
 
+import com.resernur.api.dtos.auth.RegisterDTO;
+import com.resernur.api.models.enums.UserRole;
 import com.resernur.api.models.system.ConfigParameter;
 import com.resernur.api.repositories.configuration_parameters.ConfigParameterRepository;
+import com.resernur.api.services.security.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.sql.SQLException;
 import java.util.Map;
 
 @Component
@@ -13,10 +17,25 @@ import java.util.Map;
 public class DatabaseSeeder implements CommandLineRunner {
 
     private final ConfigParameterRepository repository;
+    private final AuthService authService;
 
     @Override
     public void run(String... args) {
+        seedUsers();
         seedConfigParameters();
+    }
+
+    private void seedUsers(){
+        try{
+            var dto = new RegisterDTO();
+            dto.setFullName("Admin Admin");
+            dto.setPassword("admin!123");
+            dto.setEmail("admin@admin.com");
+            dto.setRole(UserRole.ADMINISTRADOR);
+            authService.register(dto);
+        }catch (Exception ex){
+            System.err.println("Error seeding users: " + ex.getMessage());
+        }
     }
 
     private void seedConfigParameters() {
