@@ -41,6 +41,8 @@ public class BookingRequestValidationComponent {
                                             LocalDateTime requestedStartTime,
                                             LocalDateTime requestedEndTime,
                                             ConfigurationProvider configProvider) {
+
+        //VALIDACIONES SIMPLONAS
         if (requestedStartTime == null || requestedEndTime == null) {
             return new CustomError("Las fechas de inicio y fin son obligatorias");
         }
@@ -53,8 +55,10 @@ public class BookingRequestValidationComponent {
             return new CustomError("La fecha de inicio no puede ser en el pasado");
         }
 
+        //VALIDACIONES COMPLEJAS
+
         int MAX_RESERVATION_HOURS = configProvider.getInt("MAX_RESERVATION_HOURS");
-        int MIN_ADVANCED_DAYS = configProvider.getInt("MIN_ADVANCED_DAYS");
+        int MIN_ADVANCED_DAYS = configProvider.getInt("MIN_ADVANCE_DAYS");
         String OPENING_TIME = configProvider.getString("OPENING_TIME");
         String CLOSING_TIME = configProvider.getString("CLOSING_TIME");
 
