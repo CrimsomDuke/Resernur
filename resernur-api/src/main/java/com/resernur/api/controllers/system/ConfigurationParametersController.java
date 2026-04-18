@@ -1,19 +1,25 @@
-﻿package com.resernur.api.controllers.system;
+package com.resernur.api.controllers.system;
 
 import com.resernur.api.dtos.pojos.StandardResult;
+import com.resernur.api.utils.aspect.RequiresAnyRole;
 import com.resernur.api.utils.components.config_parameters.ConfigurationProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
 @RestController
+@RequestMapping("/api/configuration-params")
 public class ConfigurationParametersController {
 
     @Autowired
     private  ConfigurationProvider configurationProvider;
 
+    @PostMapping("/get/{key}")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR"})
     public ResponseEntity<StandardResult<String>> getParameterString(String key) {
         try {
             String value = configurationProvider.getString(key);
@@ -28,7 +34,8 @@ public class ConfigurationParametersController {
         }
     }
 
-
+    @PostMapping("/get-int/{key}")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR"})
     public ResponseEntity<StandardResult<Integer>> getParameterInt(String key) {
         try {
             Integer value = configurationProvider.getInt(key);
@@ -43,6 +50,8 @@ public class ConfigurationParametersController {
         }
     }
 
+    @PostMapping("/set/{key}/{value}")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR"})
     public ResponseEntity<Map<String, String>> setParameter(String key, String value){
         try {
             configurationProvider.saveParam(key, value);
