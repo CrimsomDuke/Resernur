@@ -86,7 +86,7 @@ public class BookingRequestService {
         }
 
         // Validar solapamientos: no debe haber otras requests en ESE periodo para el mismo lugar
-        customError = validationComponent.validateOverlapping(dto, bookingRequestRepository);
+        customError = validationComponent.validateOverlappingOnCreate(dto, bookingRequestRepository);
         if(customError != null){
             return new StandardResult<>(false, customError.getMessage(), null);
         }
@@ -162,37 +162,28 @@ public class BookingRequestService {
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
 
-        //Only can update on changesReqeestedd
-        if(req.getStatus() != BookingRequestStatus.CHANGES_REQUESTED){
-            return new StandardResult<>(false, "Only requests with status 'CHANGES_REQUESTED' can be updated by the requester", null);
+        CustomError customError = validationComponent.validateUpdateRequestFields(dto, req);
+        if(customError != null){
+            return new StandardResult<>(false, customError.getMessage(), null);
         }
 
-        // Check ownership
-        if (req.getUser() == null || req.getUser().getId().intValue() != dto.getUserId()) {
-            return new StandardResult<>(false, "Unauthorized: only the requester can update this booking request", null);
-        }
-        // Only allow updates when not accepted
-        if (req.getStatus() == BookingRequestStatus.ACCEPTED) {
-            return new StandardResult<>(false, "Cannot modify an accepted request", null);
-        }
         // Validate dates if provided
         if (dto.getRequestedStartTime() != null && dto.getRequestedEndTime() != null) {
-            if (dto.getRequestedStartTime().isAfter(dto.getRequestedEndTime())) {
-                return new StandardResult<>(false, "Start time must be before end time", null);
+            customError = validationComponent.validateBookingTimes(dto.getRequestedStartTime(), dto.getRequestedEndTime());
+            if(customError != null) {
+                return new StandardResult<>(false, customError.getMessage(), null);
             }
+
             // Check overlaps with accepted bookings
-            List<BookingRequestStatus> checkStatuses = List.of(BookingRequestStatus.ACCEPTED);
-            var overlaps = bookingRequestRepository.findByPlace_IdAndStatusInAndRequestedStartTimeLessThanEqualAndRequestedEndTimeGreaterThanEqual(
-                    req.getPlace().getId(), checkStatuses, dto.getRequestedEndTime(), dto.getRequestedStartTime()
-            );
-            // exclude self
-            boolean conflict = overlaps.stream().anyMatch(r -> r.getId() != req.getId());
-            if (conflict) {
-                return new StandardResult<>(false, "Requested time conflicts with an existing accepted booking", null);
+            customError = validationComponent.validateOverlappingOnUpdate(dto, req, bookingRequestRepository);
+            if(customError != null){
+                return new StandardResult<>(false, customError.getMessage(), null);
             }
+
             req.setRequestedStartTime(dto.getRequestedStartTime());
             req.setRequestedEndTime(dto.getRequestedEndTime());
         }
+
         if (dto.getReason() != null) req.setReason(dto.getReason());
         // After update, set status back to PENDING
         req.setStatus(BookingRequestStatus.PENDING);
@@ -223,7 +214,7 @@ public class BookingRequestService {
         return deleteRequest(id, requesterId);
     }
 
-    // Accept a booking request: mark accepted, create Booking (TODO), reject overlapping requests and notify (TODO)
+    // Accept a booking request: mark accepted, create Booking reject overlapping requests and notify
     @Transactional
     public StandardResult<BookingRequestDTO> acceptRequest(int requestId, int userId) {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
@@ -244,9 +235,9 @@ public class BookingRequestService {
             var toReject = overlaps.stream().filter(r -> r.getId() != req.getId()).collect(Collectors.toList());
             for (BookingRequest r : toReject) {
                 r.setStatus(BookingRequestStatus.REJECTED);
-                r.setChangesRequestedReason("Automatically rejected because another request was accepted for the same time");
+                r.setChangesRequestedReason("Se rechazaron automaticamente debido a que se aceptó una solicitud en horario cercano");
                 bookingRequestRepository.save(r);
-                notificationService.createNotification(req.getUser().getId(), "Your booking request has been rejected because another request was accepted for the same time");
+                notificationService.createNotification(req.getUser().getId(), "Se rechazaron automaticamente debido a que se aceptó una solicitud en horario cercano");
             }
         }
 
@@ -255,7 +246,7 @@ public class BookingRequestService {
         StandardResult<BookingDTO> resBooking = bookingService.createBookingFromRequest(req);
         if(resBooking.isSuccess() == false) return new StandardResult<>(false, "Failed to create booking from accepted request: " + resBooking.getErrorMessage(), toDTO(req));
 
-        notificationService.createNotification(req.getUser().getId(), "Your booking request has been accepted and a booking has been created");
+        notificationService.createNotification(req.getUser().getId(), "Se aceptó tu solicitud.");
 
         logService.logAction(Actions.APPROVE, userId, "BOOKING_REQUEST", resBooking.getData().getBookingRequestId());
 
@@ -265,7 +256,7 @@ public class BookingRequestService {
     // Reject a booking request with a reason
     @Transactional
     public StandardResult<BookingRequestDTO> rejectRequest(int requestId, String reason, int userId) {
-        if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Rejection reason is required", null);
+        if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Se necesita razon de rechazo", null);
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
@@ -273,7 +264,7 @@ public class BookingRequestService {
         req.setChangesRequestedReason(reason);
 
         bookingRequestRepository.save(req);
-        notificationService.createNotification(req.getUser().getId(), "Your booking request has been rejected. Reason: " + reason);
+        notificationService.createNotification(req.getUser().getId(), "Se rechazo tu solicitud. Reason: " + reason);
 
 
         logService.logAction(Actions.REJECT, userId, "BOOKING_REQUEST", req.getId());
@@ -284,14 +275,14 @@ public class BookingRequestService {
     // Request changes for a booking request
     @Transactional
     public StandardResult<BookingRequestDTO> requestChanges(int requestId, String reason, int userId) {
-        if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Reason is required", null);
+        if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Se requiere una razon", null);
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
         req.setStatus(BookingRequestStatus.CHANGES_REQUESTED);
         req.setChangesRequestedReason(reason);
         bookingRequestRepository.save(req);
-        notificationService.createNotification(req.getUser().getId(), "Changes have been requested for your booking request. Reason: " + reason);
+        notificationService.createNotification(req.getUser().getId(), "Se solicitaron cambios. Reason: " + reason);
 
 
         logService.logAction(Actions.REJECT, userId, "BOOKING_REQUEST", req.getId());
