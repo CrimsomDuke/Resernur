@@ -4,6 +4,7 @@ import com.resernur.api.dtos.bookings.BookingDTO;
 import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
+import com.resernur.api.dtos.pojos.CustomError;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
@@ -18,6 +19,7 @@ import com.resernur.api.services.NotificationService;
 import com.resernur.api.services.auditlogs.LogService;
 import com.resernur.api.services.files.FileService;
 import com.resernur.api.services.places.PlaceService;
+import com.resernur.api.utils.components.bookings.BookingRequestValidationComponent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -56,41 +58,37 @@ public class BookingRequestService {
     @Autowired
     private LogService logService;
 
+    @Autowired
+    private BookingRequestValidationComponent validationComponent;
+
 
     // Create booking request with overlap validation
     @Transactional
     public StandardResult<BookingRequestDTO> createBookingRequest(BookingRequestCreateDTO dto, int userId) {
         // Validar datos de entrada
-        if (dto.getUserId() == 0 || dto.getPlaceId() == 0 || dto.getRequestedStartTime() == null || dto.getRequestedEndTime() == null) {
+        if (dto.containsMissingFields()) {
             return new StandardResult<>(false, "Missing required fields", null);
         }
 
         // Validar usuario
         var userOpt = userRepository.findById((long) dto.getUserId());
-        if (userOpt.isEmpty()) {
-            return new StandardResult<>(false, "User not found", null);
-        }
-
-        // Validar lugar
         var placeOpt = placeRepository.findById(dto.getPlaceId());
-        if (placeOpt.isEmpty()) {
-            return new StandardResult<>(false, "Place not found", null);
+
+        CustomError customError = validationComponent.validateUserAndPlaceExistance(userOpt, placeOpt);
+        if(customError != null){
+            return new StandardResult<>(false, customError.getMessage(), null);
         }
 
         // Validar fechas
-        if (dto.getRequestedStartTime().isAfter(dto.getRequestedEndTime())) {
-            return new StandardResult<>(false, "Start time must be before end time", null);
+        customError = validationComponent.validateBookingTimes(dto.getRequestedStartTime(), dto.getRequestedEndTime());
+        if(customError == validationComponent.validateBookingTimes(dto.getRequestedStartTime(), dto.getRequestedEndTime())){
+            return new StandardResult<>(false, customError.getMessage(), null);
         }
 
         // Validar solapamientos: no debe haber otras requests en ESE periodo para el mismo lugar
-        List<BookingRequestStatus> checkStatuses = List.of(
-                BookingRequestStatus.ACCEPTED
-        );
-        var overlaps = bookingRequestRepository.findByPlace_IdAndStatusInAndRequestedStartTimeLessThanEqualAndRequestedEndTimeGreaterThanEqual(
-                dto.getPlaceId(), checkStatuses, dto.getRequestedEndTime(), dto.getRequestedStartTime()
-        );
-        if (overlaps != null && !overlaps.isEmpty()) {
-            return new StandardResult<>(false, "There is already a booking request for this place in the requested time window", null);
+        customError = validationComponent.validateOverlapping(dto, bookingRequestRepository);
+        if(customError != null){
+            return new StandardResult<>(false, customError.getMessage(), null);
         }
 
         // Crear entidad y guardar
