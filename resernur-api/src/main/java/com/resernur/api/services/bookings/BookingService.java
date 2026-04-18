@@ -114,6 +114,7 @@ public class BookingService {
         dto.setStartTime(b.getStartTime());
         dto.setEndTime(b.getEndTime());
         dto.setStatus(b.getStatus());
+        dto.setActivityType(b.getActivityType());
 
         dto.setBookingRequest(b.getBookingRequest() != null ? toBookingRequestDTO(b.getBookingRequest()) : null);
         return dto;

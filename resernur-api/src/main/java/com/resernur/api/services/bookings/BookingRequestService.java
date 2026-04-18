@@ -97,6 +97,7 @@ public class BookingRequestService {
         bookingRequest.setPlace(placeOpt.get());
         bookingRequest.setRequestedStartTime(dto.getRequestedStartTime());
         bookingRequest.setRequestedEndTime(dto.getRequestedEndTime());
+        bookingRequest.setActivityType(dto.getActivityType());
         bookingRequest.setReason(dto.getReason());
 
         //handle file oh yeah
@@ -301,6 +302,7 @@ public class BookingRequestService {
         dto.setRequestedStartTime(bookingRequest.getRequestedStartTime());
         dto.setRequestedEndTime(bookingRequest.getRequestedEndTime());
         dto.setChangesRequestedReason(bookingRequest.getChangesRequestedReason());
+        dto.setActivityType(bookingRequest.getActivityType());
         // attachment file id exposure
         if (bookingRequest.getAttachmentFile() != null) dto.setAttachmentFileId(bookingRequest.getAttachmentFile().getId());
         return dto;
