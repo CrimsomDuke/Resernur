@@ -2,7 +2,10 @@ package com.resernur.api.utils.date;
 
 import org.springframework.cglib.core.Local;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.TextStyle;
 import java.util.Date;
 import java.util.Locale;
@@ -53,8 +56,42 @@ public class DateUtils {
         return name;
     }
 
+    public boolean isHourEarlierThan(String firstHour, String secondHour) {
+        // LocalTime.parse expects "HH:mm" by default
+        LocalTime time1 = LocalTime.parse(firstHour);
+        LocalTime time2 = LocalTime.parse(secondHour);
 
+        return time1.isBefore(time2);
+    }
 
+    public boolean isHourLaterThan(String firstHour, String secondHour){
+        LocalTime time1 = LocalTime.parse(firstHour);
+        LocalTime time2 = LocalTime.parse(secondHour);
+
+        return time1.isAfter(time2);
+    }
+
+    public boolean DatesSpanInBetweenHours(CustomDateObject startDate, CustomDateObject endDate, String lowerBoundHours, String upperBoundHours) {
+        //Get the "HH:mm" strings from your custom objects
+        String startHourStr = startDate.getHourDataObject().GetFullHour();
+        String endHourStr = endDate.getHourDataObject().GetFullHour();
+
+        // It is NOT earlier than the lower bound AND NOT later than the upper bound
+        boolean isAfterOpening = !isHourEarlierThan(startHourStr, lowerBoundHours);
+        boolean isBeforeClosing = !isHourLaterThan(endHourStr, upperBoundHours);
+
+        return isAfterOpening && isBeforeClosing;
+    }
+
+    public long hoursBetweenDates(LocalDateTime date1, LocalDateTime date2){
+        Duration duration = Duration.between(date1, date2);
+        return duration.toHours();
+    }
+
+    public long daysBetweenDates(LocalDateTime date1, LocalDateTime date2){
+        Duration duration = Duration.between(date1, date2);
+        return duration.toDays();
+    }
 
 
 }

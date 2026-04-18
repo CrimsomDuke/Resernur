@@ -20,6 +20,7 @@ import com.resernur.api.services.auditlogs.LogService;
 import com.resernur.api.services.files.FileService;
 import com.resernur.api.services.places.PlaceService;
 import com.resernur.api.utils.components.bookings.BookingRequestValidationComponent;
+import com.resernur.api.utils.components.config_parameters.ConfigurationProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -59,6 +61,9 @@ public class BookingRequestService {
     private LogService logService;
 
     @Autowired
+    private ConfigurationProvider configurationProvider;
+
+    @Autowired
     private BookingRequestValidationComponent validationComponent;
 
 
@@ -80,8 +85,8 @@ public class BookingRequestService {
         }
 
         // Validar fechas
-        customError = validationComponent.validateBookingTimes(dto.getRequestedStartTime(), dto.getRequestedEndTime());
-        if(customError == validationComponent.validateBookingTimes(dto.getRequestedStartTime(), dto.getRequestedEndTime())){
+        customError = validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
+        if(customError != null){
             return new StandardResult<>(false, customError.getMessage(), null);
         }
 
@@ -170,7 +175,7 @@ public class BookingRequestService {
 
         // Validate dates if provided
         if (dto.getRequestedStartTime() != null && dto.getRequestedEndTime() != null) {
-            customError = validationComponent.validateBookingTimes(dto.getRequestedStartTime(), dto.getRequestedEndTime());
+            customError = validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
             if(customError != null) {
                 return new StandardResult<>(false, customError.getMessage(), null);
             }
