@@ -1,4 +1,4 @@
-﻿package com.resernur.api.utils.components.bookings;
+package com.resernur.api.utils.components.bookings;
 
 import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;

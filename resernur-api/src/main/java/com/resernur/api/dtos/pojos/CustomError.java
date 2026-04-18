@@ -1,4 +1,4 @@
-﻿package com.resernur.api.dtos.pojos;
+package com.resernur.api.dtos.pojos;
 
 import lombok.Data;
 

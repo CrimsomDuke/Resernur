@@ -1,7 +1,11 @@
 package com.resernur.api.utils.date;
 
+import org.springframework.cglib.core.Local;
+
 import java.time.LocalDateTime;
+import java.time.format.TextStyle;
 import java.util.Date;
+import java.util.Locale;
 
 public class DateUtils {
 
@@ -38,5 +42,19 @@ public class DateUtils {
     public boolean overlaps(LocalDateTime date1, LocalDateTime date2) {
         return date1.isBefore(date2) || date1.isEqual(date2);
     }
+
+    public String getDayName(LocalDateTime date){
+        String name = date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+        return name;
+    }
+
+    public String getDayNameSpanish(LocalDateTime date){
+        String name = date.getDayOfWeek().getDisplayName(TextStyle.FULL, new Locale("es", "ES"));
+        return name;
+    }
+
+
+
+
 
 }
