@@ -1,0 +1,4 @@
+/* CSS Global Limpiado - Todo es manejado por Tailwind CDN en index.html */
+body {
+    -webkit-font-smoothing: antialiased;
+}
