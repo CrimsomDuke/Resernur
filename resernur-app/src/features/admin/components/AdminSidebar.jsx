@@ -43,16 +43,6 @@ export default function AdminSidebar({ items, activeSection, onNavigate }) {
         </div>
       </nav>
 
-      <div className="p-4 border-t border-surface-container">
-        <button
-          type="button"
-          onClick={() => onNavigate('create-space')}
-          className="w-full bg-primary text-white rounded-md py-3 font-label font-semibold text-sm hover:bg-primary-container transition-colors flex items-center justify-center gap-2"
-        >
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          Crear espacio
-        </button>
-      </div>
     </aside>
   );
 }

@@ -42,6 +42,7 @@ function App() {
   const [userRole, setUserRole] = useState(null);
   const [currentView, setCurrentView] = useState("explorer"); // 'explorer' | 'bookingEngine' | 'admin'
   const [spaceToBook, setSpaceToBook] = useState(null);
+  const [spaceToEdit, setSpaceToEdit] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('resernur_token');
@@ -78,6 +79,7 @@ function App() {
     setUserRole(null);
     setCurrentView('explorer');
     setSpaceToBook(null);
+    setSpaceToEdit(null);
   };
 
   const handleNavigate = (view) => {
@@ -92,6 +94,16 @@ function App() {
   const handleReserveSpace = (space) => {
     setSpaceToBook(space);
     setCurrentView("bookingEngine");
+  };
+
+  const handleEditSpace = (space) => {
+    if (userRole !== ADMIN_ROLE) return;
+    setSpaceToEdit(space);
+    setCurrentView('admin');
+  };
+
+  const handleEditHandled = () => {
+    setSpaceToEdit(null);
   };
 
   if (!isAuthenticated) {
@@ -109,7 +121,12 @@ function App() {
       
       <main style={{ padding: '2rem' }}>
         {currentView === "explorer" && (
-          <SpaceExplorer onReserve={handleReserveSpace} onAuthError={handleLogout} />
+          <SpaceExplorer
+            onReserve={handleReserveSpace}
+            onAuthError={handleLogout}
+            isAdmin={userRole === ADMIN_ROLE}
+            onEditSpace={handleEditSpace}
+          />
         )}
 
         {currentView === "bookingEngine" && (
@@ -119,7 +136,9 @@ function App() {
           />
         )}
 
-        {currentView === "admin" && <AdminPanel />}
+        {currentView === "admin" && (
+          <AdminPanel editingSpace={spaceToEdit} onEditHandled={handleEditHandled} />
+        )}
 
         {(currentView === "calendar" || currentView === "booking") && (
           <div style={{ textAlign: 'center', padding: '5rem', color: '#6b7280' }}>

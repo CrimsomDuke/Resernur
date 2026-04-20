@@ -1,25 +1,133 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+
+const LOCAL_SPACES_STORAGE_KEY = 'resernur_local_spaces';
+const DEFAULT_SPACE_IMAGES = [
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuCnw1bJEiqqg6hJ0WgN5OEE3d9xXzaa5CnvKVVKfWDu2waWCJ1Zw2ImMb4KikxZGOb9hWmXi9gwxVubXM2XKhMMm5kGTp8OxpMo_MjQdX8l11HmcJZg7r7WoMeRJk-I-4zR7J-mxIhOg6k4eRBQ_bVayhZMtERQirMCmUpSXNIAsm4tWZULclwjIcVIP8BWdXM4aOrFI9Wh4cOYiCrFUrYyKAgwW61K6seaVLCpmHjX_dISaLj7oCTsFaNspKyLCcsRVg_NGsO498w',
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuBn0WnBxGNPHdZnJS6k4vmL84ldZMzye8t7nNvm3Olh9IU1hwx_NUzfPEFT8WlP25wQl1_y908B4s3M_U6KIo154EEBjIXYfyVFQZ23sKHdI3xXT-fP_WTHsfkguVF8g_W6kgYr86IpQ7LlTCyb8baPXvoCZFLk0wBvDFXxoUQJZ_Oh0gGkW5IuVlTJHIAU_A6nNZ_Gm6rL2vmI3Cf9Duhwaxli8_EqBw-2j3nSYOW_ui1N1LAZb5g3NGDDprRrB8q0vh9NNCRiuuk',
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuDgKAsDu_IhY694CGDVZxFRq6Cikso0ucRJNOfjUD34P4TbIAjX6hF568LYY9W6wUFo-S-v47lS17RcXhlTBHU_WCJLLxM6gyxTknCGRrnjVNtYpRSvhhjhlICuiIJHBvqhJxWfYkyfS6bUedlxC3Veu2mlPt9sDojz3kafo5C5iETh1129j-XzwzWPEJdfbWe7kRq_rPYUjFNR3XDf39MQVeJG2D3ZJndAYpg4NLfb3SArxAetuWmWx6hLtwmgC3gyl3UdlNf_6WI'
+];
 
 const INITIAL_FORM = {
   name: '',
   description: '',
   capacity: '',
   location: '',
-  managerName: '',
+  userInChargeId: '',
+  selectedFileName: '',
   hasProjector: false,
   hasWifi: true,
   hasAirConditioning: false
 };
 
-export default function AdminCreateSpaceView() {
+export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved, onCancelEdit }) {
   const [form, setForm] = useState(INITIAL_FORM);
   const [createdSpaces, setCreatedSpaces] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [photoHint, setPhotoHint] = useState('');
+  const [encargados, setEncargados] = useState([]);
+  const [isLoadingEncargados, setIsLoadingEncargados] = useState(true);
+  const [encargadosError, setEncargadosError] = useState('');
+
+  const isEditMode = Number(editingSpace?.id) > 0;
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_SPACES_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setCreatedSpaces(parsed);
+      }
+    } catch {
+      setCreatedSpaces([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setForm(INITIAL_FORM);
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      name: editingSpace?.name || '',
+      description: editingSpace?.description || '',
+      capacity: editingSpace?.capacity ? String(editingSpace.capacity) : '',
+      userInChargeId: editingSpace?.userInChargeId ? String(editingSpace.userInChargeId) : '',
+      location: editingSpace?.location || '',
+      selectedFileName: ''
+    }));
+
+    setSuccessMsg('');
+    setErrorMsg('');
+    setPhotoHint('');
+  }, [editingSpace, isEditMode]);
+
+  useEffect(() => {
+    const loadEncargados = async () => {
+      setIsLoadingEncargados(true);
+      setEncargadosError('');
+      try {
+        const token = localStorage.getItem('resernur_token');
+        if (!token) {
+          setEncargados([]);
+          setEncargadosError('No hay sesion activa para cargar encargados.');
+          return;
+        }
+
+        const response = await fetch('http://localhost:5000/api/users?page=0&pageSize=200', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('resernur_token');
+          setEncargados([]);
+          setEncargadosError('No autorizado para cargar encargados. Inicia sesion nuevamente.');
+          return;
+        }
+
+        if (!response.ok) {
+          setEncargados([]);
+          setEncargadosError('No se pudo cargar la lista de encargados.');
+          return;
+        }
+
+        const data = await response.json().catch(() => ({}));
+        const users = Array.isArray(data?.content) ? data.content : [];
+        const onlyEncargados = users
+          .filter((user) => user?.role === 'ENCARGADO' && typeof user?.id === 'number' && user.id > 0)
+          .map((user) => ({ id: user.id, fullName: user.fullName || 'Sin nombre', email: user.email || '' }))
+          .sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+        setEncargados(onlyEncargados);
+
+        if (onlyEncargados.length === 0) {
+          setEncargadosError('No hay usuarios con rol ENCARGADO para seleccionar.');
+        }
+      } catch {
+        setEncargados([]);
+        setEncargadosError('Error de red al cargar encargados.');
+      } finally {
+        setIsLoadingEncargados(false);
+      }
+    };
+
+    loadEncargados();
+  }, []);
 
   const isValid = useMemo(() => {
-    return form.name.trim().length >= 3 && Number(form.capacity) > 0;
+    return form.name.trim().length >= 3 && Number(form.capacity) > 0 && Number(form.userInChargeId) > 0;
   }, [form]);
+
+  const encargadosById = useMemo(() => {
+    return encargados.reduce((acc, encargado) => {
+      acc[encargado.id] = encargado.fullName;
+      return acc;
+    }, {});
+  }, [encargados]);
 
   const onInputChange = (field) => (event) => {
     const value = event.target.value;
@@ -31,23 +139,96 @@ export default function AdminCreateSpaceView() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const onSelectPhoto = (event) => {
+    const file = event.target.files?.[0];
+    const fileName = file?.name || '';
+    setForm((prev) => ({ ...prev, selectedFileName: fileName }));
+
+    if (fileName) {
+      setPhotoHint(`Foto seleccionada (${fileName}) - la subida real se habilitara despues.`);
+    } else {
+      setPhotoHint('');
+    }
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setSuccessMsg('');
     setErrorMsg('');
+    setPhotoHint('');
 
     if (!isValid) {
-      setErrorMsg('Completa al menos nombre y capacidad valida para registrar el espacio.');
+      setErrorMsg('Completa nombre, capacidad valida y selecciona un encargado para registrar el espacio.');
       return;
     }
 
-    const previewItem = {
-      id: Date.now(),
+    const finalImage = DEFAULT_SPACE_IMAGES[Math.floor(Math.random() * DEFAULT_SPACE_IMAGES.length)];
+
+    const token = localStorage.getItem('resernur_token');
+    if (!token) {
+      setErrorMsg('No hay sesion activa. Inicia sesion nuevamente.');
+      return;
+    }
+
+    const resolvedUserInChargeId = Number(form.userInChargeId);
+
+    if (!resolvedUserInChargeId || Number.isNaN(resolvedUserInChargeId) || resolvedUserInChargeId <= 0) {
+      setErrorMsg('Debes seleccionar un encargado valido de la lista.');
+      return;
+    }
+
+    const payload = {
       name: form.name.trim(),
       description: form.description.trim(),
-      location: form.location.trim(),
-      managerName: form.managerName.trim(),
       capacity: Number(form.capacity),
+      userInChargeId: resolvedUserInChargeId
+    };
+
+    setIsSubmitting(true);
+
+    try {
+      const endpoint = isEditMode
+        ? `http://localhost:5000/api/places/${editingSpace.id}`
+        : 'http://localhost:5000/api/places';
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('resernur_token');
+        throw new Error(
+          isEditMode
+            ? 'No autorizado para editar espacios. Inicia sesion nuevamente con un usuario administrador.'
+            : 'No autorizado para crear espacios. Inicia sesion nuevamente con un usuario administrador.'
+        );
+      }
+
+      const data = await response.json().catch(() => ({}));
+      const result = data?.data || null;
+
+      if (!response.ok || data?.success === false || !result) {
+        const backendMessage = data?.errorMessage || data?.error || (isEditMode
+          ? 'No se pudo editar el espacio en la API.'
+          : 'No se pudo crear el espacio en la API.');
+        throw new Error(backendMessage);
+      }
+
+      const previewItem = {
+      id: result.id,
+      name: result.name,
+      description: result.description,
+      location: form.location.trim(),
+      userInChargeId: result.userInChargeId,
+      userInChargeName: encargadosById[result.userInChargeId] || 'Encargado asignado',
+      capacity: result.capacity,
+      image: finalImage,
       equipment: [
         form.hasProjector ? 'Proyector' : null,
         form.hasWifi ? 'Wi-Fi' : null,
@@ -55,19 +236,48 @@ export default function AdminCreateSpaceView() {
       ].filter(Boolean)
     };
 
-    setCreatedSpaces((prev) => [previewItem, ...prev]);
-    setSuccessMsg('Espacio agregado a la vista previa del panel (modo frontend).');
-    setForm(INITIAL_FORM);
+      setCreatedSpaces((prev) => {
+        if (isEditMode) {
+          return [previewItem, ...prev.filter((item) => item.id !== previewItem.id)];
+        }
+        return [previewItem, ...prev];
+      });
+      localStorage.removeItem(LOCAL_SPACES_STORAGE_KEY);
+
+      setSuccessMsg(isEditMode ? 'Espacio actualizado con exito.' : 'Espacio creado con exito.');
+
+      if (isEditMode) {
+        if (typeof onEditSaved === 'function') {
+          onEditSaved(result);
+        }
+      } else {
+        setForm(INITIAL_FORM);
+      }
+    } catch (error) {
+      setErrorMsg(error.message || 'No se pudo guardar el espacio.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <section className="space-y-6">
       <header>
         <p className="text-xs uppercase tracking-widest font-label font-semibold text-on-surface-variant">Recursos Institucionales</p>
-        <h2 className="font-headline text-3xl font-bold text-primary mt-1">Crear nuevo espacio</h2>
+        <h2 className="font-headline text-3xl font-bold text-primary mt-1">
+          {isEditMode ? 'Editar espacio' : 'Crear nuevo espacio'}
+        </h2>
         <p className="text-on-surface-variant mt-2">
-          Esta pantalla esta en modo frontend, sin integracion a backend todavia.
+          {isEditMode
+            ? 'Actualiza los datos del espacio seleccionado y guarda los cambios.'
+            : 'Formulario conectado al backend con seleccion obligatoria de encargado.'}
         </p>
+        {isEditMode && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-md bg-secondary-container px-3 py-2 text-sm text-primary font-semibold">
+            <span className="material-symbols-outlined text-[18px]">edit</span>
+            Editando: {editingSpace?.name || `Espacio #${editingSpace?.id}`}
+          </div>
+        )}
       </header>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -125,14 +335,29 @@ export default function AdminCreateSpaceView() {
               </label>
 
               <label className="block">
-                <span className="text-xs uppercase tracking-widest font-bold text-on-surface-variant">Responsable</span>
-                <input
-                  type="text"
-                  value={form.managerName}
-                  onChange={onInputChange('managerName')}
-                  placeholder="Nombre del encargado"
+                <span className="text-xs uppercase tracking-widest font-bold text-on-surface-variant">Encargado *</span>
+                <select
+                  value={form.userInChargeId}
+                  onChange={onInputChange('userInChargeId')}
                   className="mt-2 w-full rounded-lg border border-outline-variant px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
+                  required
+                  disabled={isLoadingEncargados || encargados.length === 0}
+                >
+                  <option value="" disabled>
+                    {isLoadingEncargados ? 'Cargando encargados...' : 'Selecciona un encargado'}
+                  </option>
+                  {encargados.map((encargado) => (
+                    <option key={encargado.id} value={encargado.id}>
+                      {encargado.fullName}
+                    </option>
+                  ))}
+                </select>
+                {encargadosError && <p className="text-xs text-error mt-1">{encargadosError}</p>}
+                {!encargadosError && (
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    Desplaza la lista y selecciona un usuario con rol ENCARGADO.
+                  </p>
+                )}
               </label>
             </div>
 
@@ -146,6 +371,25 @@ export default function AdminCreateSpaceView() {
                 className="mt-2 w-full rounded-lg border border-outline-variant px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </label>
+
+            <label className="block">
+              <span className="text-xs uppercase tracking-widest font-bold text-on-surface-variant">Foto del espacio (proximamente)</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={onSelectPhoto}
+                className="mt-2 w-full rounded-lg border border-outline-variant px-3 py-2 bg-white"
+              />
+              <p className="text-xs text-on-surface-variant mt-1">
+                Por ahora solo muestra el nombre del archivo, aun no se sube al servidor. Mientras tanto, se asigna una imagen por defecto automaticamente.
+              </p>
+            </label>
+
+            {photoHint && (
+              <div className="rounded-lg bg-primary-fixed/50 border border-primary-fixed-dim px-4 py-3 text-sm text-on-surface">
+                {photoHint}
+              </div>
+            )}
 
             <fieldset>
               <legend className="text-xs uppercase tracking-widest font-bold text-on-surface-variant mb-3">Equipamiento base</legend>
@@ -166,12 +410,23 @@ export default function AdminCreateSpaceView() {
             </fieldset>
 
             <div className="pt-4 border-t border-surface-container-high flex justify-end">
+              {isEditMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof onCancelEdit === 'function') onCancelEdit();
+                  }}
+                  className="px-6 py-3 rounded-md border border-outline-variant text-on-surface font-semibold hover:bg-surface-container transition-colors mr-3"
+                >
+                  Cancelar edicion
+                </button>
+              )}
               <button
                 type="submit"
-                disabled={!isValid}
+                disabled={!isValid || isSubmitting}
                 className="px-6 py-3 rounded-md bg-primary text-white font-semibold hover:bg-primary-container transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Guardar espacio (local)
+                {isSubmitting ? 'Guardando...' : (isEditMode ? 'Actualizar espacio' : 'Guardar espacio')}
               </button>
             </div>
           </form>
@@ -190,10 +445,19 @@ export default function AdminCreateSpaceView() {
 
             {createdSpaces.map((space) => (
               <article key={space.id} className="rounded-lg border border-surface-container-high bg-surface-container-low p-4">
+                <img
+                  src={space.image}
+                  alt={space.name}
+                  className="w-full h-28 object-cover rounded-md mb-3"
+                />
                 <p className="font-headline font-bold text-on-surface">{space.name}</p>
                 <p className="text-xs text-on-surface-variant mt-1">Capacidad: {space.capacity}</p>
                 {space.location && <p className="text-xs text-on-surface-variant">Ubicacion: {space.location}</p>}
-                {space.managerName && <p className="text-xs text-on-surface-variant">Responsable: {space.managerName}</p>}
+                {space.userInChargeId > 0 && (
+                  <p className="text-xs text-on-surface-variant">
+                    Encargado: {space.userInChargeName || encargadosById[space.userInChargeId] || `ID ${space.userInChargeId}`}
+                  </p>
+                )}
                 {space.equipment.length > 0 && (
                   <p className="text-xs text-on-surface-variant mt-2">Equipamiento: {space.equipment.join(', ')}</p>
                 )}

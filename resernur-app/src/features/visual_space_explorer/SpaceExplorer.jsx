@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
-export default function SpaceExplorer({ onReserve, onAuthError }) {
+const LOCAL_SPACES_STORAGE_KEY = 'resernur_local_spaces';
+
+export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false, onEditSpace }) {
   const [spaces, setSpaces] = useState([]);
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [usersById, setUsersById] = useState({});
 
   const DEFAULT_IMAGES = [
     "https://lh3.googleusercontent.com/aida-public/AB6AXuCnw1bJEiqqg6hJ0WgN5OEE3d9xXzaa5CnvKVVKfWDu2waWCJ1Zw2ImMb4KikxZGOb9hWmXi9gwxVubXM2XKhMMm5kGTp8OxpMo_MjQdX8l11HmcJZg7r7WoMeRJk-I-4zR7J-mxIhOg6k4eRBQ_bVayhZMtERQirMCmUpSXNIAsm4tWZULclwjIcVIP8BWdXM4aOrFI9Wh4cOYiCrFUrYyKAgwW61K6seaVLCpmHjX_dISaLj7oCTsFaNspKyLCcsRVg_NGsO498w",
@@ -21,9 +24,42 @@ export default function SpaceExplorer({ onReserve, onAuthError }) {
   const fetchSpaces = async () => {
     setIsLoading(true);
     setErrorMsg("");
+
+    let localSpaces = [];
+    try {
+      const raw = localStorage.getItem(LOCAL_SPACES_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        localSpaces = parsed;
+      }
+    } catch {
+      localSpaces = [];
+    }
+
     try {
       const token = localStorage.getItem("resernur_token");
       const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+
+      let userMap = {};
+      if (token) {
+        try {
+          const usersResponse = await fetch("http://localhost:5000/api/users?page=0&pageSize=200", { headers });
+          if (usersResponse.ok) {
+            const usersData = await usersResponse.json().catch(() => ({}));
+            const usersContent = usersData.content || usersData.data?.content || [];
+            if (Array.isArray(usersContent)) {
+              userMap = usersContent.reduce((acc, user) => {
+                if (typeof user?.id === "number" && user.id > 0) {
+                  acc[user.id] = user.fullName || user.email || `Usuario ${user.id}`;
+                }
+                return acc;
+              }, {});
+            }
+          }
+        } catch {
+          userMap = {};
+        }
+      }
 
       const response = await fetch("http://localhost:5000/api/places", { headers });
       if (response.status === 401 || response.status === 403) {
@@ -41,13 +77,21 @@ export default function SpaceExplorer({ onReserve, onAuthError }) {
 
       const mappedSpaces = content.map((sp, idx) => ({
         ...sp,
+        userInChargeName: userMap[sp.userInChargeId] || "No definido",
         image: DEFAULT_IMAGES[idx % DEFAULT_IMAGES.length]
       }));
 
       setSpaces(mappedSpaces);
+      setUsersById(userMap);
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.message || "Error cargando espacios.");
+
+      if (localSpaces.length > 0) {
+        setSpaces(localSpaces);
+        setErrorMsg("No se pudo cargar desde la API, mostrando espacios guardados localmente.");
+      } else {
+        setErrorMsg(err.message || "Error cargando espacios.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +102,11 @@ export default function SpaceExplorer({ onReserve, onAuthError }) {
     if (!term) return true;
     return s.name.toLowerCase().includes(term) || (s.description && s.description.toLowerCase().includes(term));
   });
+
+  const getManagerLabel = (space) => {
+    if (!space || !space.userInChargeId) return "No definido";
+    return space.userInChargeName || usersById[space.userInChargeId] || `ID ${space.userInChargeId}`;
+  };
 
   return (
     <main className="pt-24 pb-16 px-6 md:px-12 max-w-[1440px] mx-auto text-on-surface">
@@ -121,6 +170,10 @@ export default function SpaceExplorer({ onReserve, onAuthError }) {
                     <span className="material-symbols-outlined text-sm">location_on</span>
                     {space.description?.substring(0, 35) || "Bloque Académico"}
                   </p>
+                  <p className="text-on-surface-variant text-xs mt-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm">badge</span>
+                    Encargado: {getManagerLabel(space)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -143,6 +196,7 @@ export default function SpaceExplorer({ onReserve, onAuthError }) {
                 </div>
                 <h2 className="font-headline text-4xl md:text-5xl font-extrabold tracking-tight mb-2 drop-shadow-md">{selectedSpace.name}</h2>
                 <p className="text-lg opacity-90">{selectedSpace.description || "Ficha técnica institucional en detalle."}</p>
+                <p className="text-sm opacity-90 mt-2">Encargado: {getManagerLabel(selectedSpace)}</p>
               </div>
             </div>
 
@@ -195,6 +249,15 @@ export default function SpaceExplorer({ onReserve, onAuthError }) {
               </div>
 
               <div className="space-y-4 pt-4 border-t border-surface-container">
+                {isAdmin && typeof onEditSpace === 'function' && (
+                  <button
+                    onClick={() => onEditSpace(selectedSpace)}
+                    className="w-full bg-secondary-container text-primary py-3 rounded-xl font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">edit</span>
+                    Editar informacion del espacio
+                  </button>
+                )}
                 <button 
                   onClick={() => onReserve(selectedSpace)}
                   className="w-full bg-primary-container text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary-container/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 group"

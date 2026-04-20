@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AdminSidebar from './components/AdminSidebar';
 import AdminTopbar from './components/AdminTopbar';
 import AdminDashboardView from './views/AdminDashboardView';
@@ -13,8 +13,14 @@ const MENU_ITEMS = [
   { key: 'analytics', label: 'Analitica', icon: 'insights' }
 ];
 
-export default function AdminPanel() {
+export default function AdminPanel({ editingSpace = null, onEditHandled }) {
   const [activeSection, setActiveSection] = useState('dashboard');
+
+  useEffect(() => {
+    if (editingSpace?.id) {
+      setActiveSection('create-space');
+    }
+  }, [editingSpace]);
 
   const currentTitle = useMemo(() => {
     return MENU_ITEMS.find((item) => item.key === activeSection)?.label || 'Administrador';
@@ -26,7 +32,13 @@ export default function AdminPanel() {
     }
 
     if (activeSection === 'create-space') {
-      return <AdminCreateSpaceView />;
+      return (
+        <AdminCreateSpaceView
+          editingSpace={editingSpace}
+          onEditSaved={onEditHandled}
+          onCancelEdit={onEditHandled}
+        />
+      );
     }
 
     return (
