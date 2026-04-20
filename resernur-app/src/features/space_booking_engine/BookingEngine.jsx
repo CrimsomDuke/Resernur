@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { addLocalNotification } from '../../utils/notificationCenter';
 
 export default function BookingEngine({ spaceToBook, onGoBack }) {
   const [date, setDate] = useState("");
@@ -15,6 +16,10 @@ export default function BookingEngine({ spaceToBook, onGoBack }) {
     
     // Simulate API request
     setTimeout(() => {
+      addLocalNotification({
+        type: 'BOOKING_REQUEST_CREATED',
+        message: `Se envio una solicitud de reserva para "${spaceToBook.name}".`
+      });
       setIsSubmitting(false);
       setIsSuccess(true);
     }, 1200);

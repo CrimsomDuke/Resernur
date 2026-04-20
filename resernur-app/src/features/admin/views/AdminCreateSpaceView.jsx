@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { addLocalNotification } from '../../../utils/notificationCenter';
 
 const LOCAL_SPACES_STORAGE_KEY = 'resernur_local_spaces';
 const DEFAULT_SPACE_IMAGES = [
@@ -251,6 +252,10 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
           onEditSaved(result);
         }
       } else {
+        addLocalNotification({
+          type: 'SPACE_CREATED',
+          message: `Se creo el espacio "${result.name}".`
+        });
         setForm(INITIAL_FORM);
       }
     } catch (error) {
