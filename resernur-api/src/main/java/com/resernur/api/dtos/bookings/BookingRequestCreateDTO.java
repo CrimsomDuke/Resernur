@@ -21,4 +21,10 @@ public class BookingRequestCreateDTO {
     private LocalDateTime requestedEndTime;
 
     private MultipartFile attachmentFile; // optional file upload
+
+    public boolean containsMissingFields(){
+        return this.getUserId() == 0 || this.getPlaceId() == 0 || this.getRequestedStartTime() == null || this.getRequestedEndTime() == null;
+    }
+
+
 }

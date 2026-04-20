@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
-export default function SpaceExplorer({ onReserve }) {
+export default function SpaceExplorer({ onReserve, onAuthError }) {
   const [spaces, setSpaces] = useState([]);
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const DEFAULT_IMAGES = [
     "https://lh3.googleusercontent.com/aida-public/AB6AXuCnw1bJEiqqg6hJ0WgN5OEE3d9xXzaa5CnvKVVKfWDu2waWCJ1Zw2ImMb4KikxZGOb9hWmXi9gwxVubXM2XKhMMm5kGTp8OxpMo_MjQdX8l11HmcJZg7r7WoMeRJk-I-4zR7J-mxIhOg6k4eRBQ_bVayhZMtERQirMCmUpSXNIAsm4tWZULclwjIcVIP8BWdXM4aOrFI9Wh4cOYiCrFUrYyKAgwW61K6seaVLCpmHjX_dISaLj7oCTsFaNspKyLCcsRVg_NGsO498w",
@@ -19,12 +20,21 @@ export default function SpaceExplorer({ onReserve }) {
 
   const fetchSpaces = async () => {
     setIsLoading(true);
+    setErrorMsg("");
     try {
       const token = localStorage.getItem("resernur_token");
       const headers = token ? { "Authorization": `Bearer ${token}` } : {};
 
       const response = await fetch("http://localhost:5000/api/places", { headers });
-      if (!response.ok) throw new Error("Fallo de red");
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("resernur_token");
+        if (onAuthError) onAuthError();
+        throw new Error("Tu sesion vencio. Inicia sesion nuevamente.");
+      }
+
+      if (!response.ok) {
+        throw new Error("No se pudieron cargar los espacios. Verifica que la API este encendida.");
+      }
 
       const resData = await response.json();
       const content = resData.data?.content || resData.content || [];
@@ -37,6 +47,7 @@ export default function SpaceExplorer({ onReserve }) {
       setSpaces(mappedSpaces);
     } catch (err) {
       console.error(err);
+      setErrorMsg(err.message || "Error cargando espacios.");
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +93,14 @@ export default function SpaceExplorer({ onReserve }) {
 
         {isLoading ? (
           <div className="text-center p-8">Cargando espacios del catálogo...</div>
+        ) : errorMsg ? (
+          <div className="text-center p-8 rounded-xl bg-red-50 border border-red-200 text-red-700">
+            {errorMsg}
+          </div>
+        ) : filteredSpaces.length === 0 ? (
+          <div className="text-center p-8 rounded-xl bg-surface-container-low border border-surface-container-high text-on-surface-variant">
+            No hay espacios para mostrar en este momento.
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredSpaces.map((space, index) => (

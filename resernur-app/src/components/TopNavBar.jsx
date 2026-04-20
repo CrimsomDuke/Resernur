@@ -1,7 +1,7 @@
 import React from 'react';
 import logoNur from '../assets/nur.png';
 
-export default function TopNavBar({ currentView, onNavigate, onLogout }) {
+export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin = false }) {
   return (
     <nav className="fixed top-0 w-full z-50 bg-slate-50/80 backdrop-blur-xl shadow-sm">
       <div className="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
@@ -30,14 +30,24 @@ export default function TopNavBar({ currentView, onNavigate, onLogout }) {
             </a>
             <a 
               className={`font-medium transition-colors cursor-pointer ${(currentView === 'bookingEngine' || currentView === 'booking') ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
+              onClick={() => onNavigate("bookingEngine")}
             >
               Reservas
             </a>
             <a 
               className={`font-medium transition-colors cursor-pointer ${currentView === 'calendar' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
+              onClick={() => onNavigate("calendar")}
             >
               Calendario
             </a>
+            {isAdmin && (
+              <a 
+                className={`font-medium transition-colors cursor-pointer ${currentView === 'admin' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
+                onClick={() => onNavigate("admin")}
+              >
+                Administrador
+              </a>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">
