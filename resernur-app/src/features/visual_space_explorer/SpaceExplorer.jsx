@@ -5,10 +5,13 @@ const LOCAL_SPACES_STORAGE_KEY = 'resernur_local_spaces';
 export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false, onEditSpace }) {
   const [spaces, setSpaces] = useState([]);
   const [selectedSpace, setSelectedSpace] = useState(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [usersById, setUsersById] = useState({});
+  const [spaceImagesById, setSpaceImagesById] = useState({});
 
   const DEFAULT_IMAGES = [
     "https://lh3.googleusercontent.com/aida-public/AB6AXuCnw1bJEiqqg6hJ0WgN5OEE3d9xXzaa5CnvKVVKfWDu2waWCJ1Zw2ImMb4KikxZGOb9hWmXi9gwxVubXM2XKhMMm5kGTp8OxpMo_MjQdX8l11HmcJZg7r7WoMeRJk-I-4zR7J-mxIhOg6k4eRBQ_bVayhZMtERQirMCmUpSXNIAsm4tWZULclwjIcVIP8BWdXM4aOrFI9Wh4cOYiCrFUrYyKAgwW61K6seaVLCpmHjX_dISaLj7oCTsFaNspKyLCcsRVg_NGsO498w",
@@ -20,6 +23,12 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
   useEffect(() => {
     fetchSpaces();
   }, []);
+
+  useEffect(() => {
+    if (!selectedSpace?.id) return;
+    setSelectedImageIndex(0);
+    fetchSpaceImages(selectedSpace.id);
+  }, [selectedSpace?.id]);
 
   const fetchSpaces = async () => {
     setIsLoading(true);
@@ -78,7 +87,10 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
       const mappedSpaces = content.map((sp, idx) => ({
         ...sp,
         userInChargeName: userMap[sp.userInChargeId] || "No definido",
-        image: DEFAULT_IMAGES[idx % DEFAULT_IMAGES.length]
+        image: DEFAULT_IMAGES[idx % DEFAULT_IMAGES.length],
+        images: Array.isArray(sp.images) && sp.images.length > 0
+          ? sp.images
+          : [DEFAULT_IMAGES[idx % DEFAULT_IMAGES.length]]
       }));
 
       setSpaces(mappedSpaces);
@@ -97,6 +109,30 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
     }
   };
 
+  const fetchSpaceImages = async (spaceId) => {
+    if (!spaceId || spaceImagesById[spaceId]) return;
+
+    try {
+      const token = localStorage.getItem("resernur_token");
+      const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+      const response = await fetch(`http://localhost:5000/api/places/${spaceId}/images?page=0&pageSize=20`, { headers });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json().catch(() => ({}));
+      const content = data?.content || data?.data?.content || [];
+      const urls = Array.isArray(content)
+        ? content.map((item) => item?.url).filter(Boolean)
+        : [];
+
+      setSpaceImagesById((prev) => ({ ...prev, [spaceId]: urls }));
+    } catch {
+      // Keep fallback image if image endpoint is unavailable.
+    }
+  };
+
   const filteredSpaces = spaces.filter(s => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return true;
@@ -106,6 +142,46 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
   const getManagerLabel = (space) => {
     if (!space || !space.userInChargeId) return "No definido";
     return space.userInChargeName || usersById[space.userInChargeId] || `ID ${space.userInChargeId}`;
+  };
+
+  const getImagesForSpace = (space) => {
+    if (!space) return [];
+
+    const apiImages = spaceImagesById[space.id];
+    if (Array.isArray(apiImages) && apiImages.length > 0) return apiImages;
+
+    if (Array.isArray(space.images) && space.images.length > 0) return space.images;
+    if (space.image) return [space.image];
+
+    return [];
+  };
+
+  const getCoverImage = (space, fallback) => {
+    const images = getImagesForSpace(space);
+    return images[0] || fallback || DEFAULT_IMAGES[0];
+  };
+
+  const selectedImages = getImagesForSpace(selectedSpace);
+  const selectedImage = selectedImages[selectedImageIndex] || selectedSpace?.image || DEFAULT_IMAGES[0];
+
+  useEffect(() => {
+    if (selectedImages.length <= 1 || isCarouselPaused) return;
+
+    const intervalId = window.setInterval(() => {
+      setSelectedImageIndex((prev) => (prev + 1) % selectedImages.length);
+    }, 3500);
+
+    return () => window.clearInterval(intervalId);
+  }, [selectedImages.length, isCarouselPaused]);
+
+  const showNextImage = () => {
+    if (!selectedImages.length) return;
+    setSelectedImageIndex((prev) => (prev + 1) % selectedImages.length);
+  };
+
+  const showPrevImage = () => {
+    if (!selectedImages.length) return;
+    setSelectedImageIndex((prev) => (prev - 1 + selectedImages.length) % selectedImages.length);
   };
 
   return (
@@ -152,17 +228,24 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredSpaces.map((space, index) => (
+            {filteredSpaces.map((space) => (
               <div 
                 key={space.id} 
                 className={`bg-surface-container-lowest rounded-xl overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer ${selectedSpace?.id === space.id ? 'ring-2 ring-primary border-l-4 border-tertiary' : ''}`}
                 onClick={() => setSelectedSpace(space)}
               >
                 <div className="relative h-48">
-                  <img alt={space.name} className="w-full h-full object-cover" src={space.image}/>
+                  <img alt={space.name} className="w-full h-full object-cover" src={getCoverImage(space, space.image)}/>
                   <div className="absolute top-4 left-4">
                     <span className="glass-card px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-primary border border-white/20">{space.capacity} Pax</span>
                   </div>
+                  {getImagesForSpace(space).length > 1 && (
+                    <div className="absolute top-4 right-4">
+                      <span className="glass-card px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-primary border border-white/20">
+                        {getImagesForSpace(space).length} fotos
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-5">
                   <h4 className="font-headline text-lg font-bold text-primary mb-1">{space.name}</h4>
@@ -186,9 +269,48 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
         <section className="bg-surface-container rounded-3xl overflow-hidden shadow-2xl shadow-primary/10 transition-all">
           <div className="flex flex-col lg:flex-row">
             {/* Hero Image Area */}
-            <div className="lg:w-3/5 relative min-h-[400px]">
-              <img alt={selectedSpace.name} className="absolute inset-0 w-full h-full object-cover" src={selectedSpace.image}/>
+            <div
+              className="lg:w-3/5 relative min-h-[400px]"
+              onMouseEnter={() => setIsCarouselPaused(true)}
+              onMouseLeave={() => setIsCarouselPaused(false)}
+            >
+              <img alt={selectedSpace.name} className="absolute inset-0 w-full h-full object-cover" src={selectedImage}/>
               <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
+
+              {selectedImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={showPrevImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/45 text-white backdrop-blur-sm hover:bg-black/65 transition-colors flex items-center justify-center"
+                    aria-label="Imagen anterior"
+                  >
+                    <span className="material-symbols-outlined">chevron_left</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={showNextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/45 text-white backdrop-blur-sm hover:bg-black/65 transition-colors flex items-center justify-center"
+                    aria-label="Imagen siguiente"
+                  >
+                    <span className="material-symbols-outlined">chevron_right</span>
+                  </button>
+
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/35 px-3 py-2 rounded-full backdrop-blur-sm">
+                    {selectedImages.map((_, idx) => (
+                      <button
+                        key={`dot-${idx}`}
+                        type="button"
+                        onClick={() => setSelectedImageIndex(idx)}
+                        className={`h-2.5 w-2.5 rounded-full transition-all ${idx === selectedImageIndex ? 'bg-white' : 'bg-white/45 hover:bg-white/75'}`}
+                        aria-label={`Ver imagen ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+
               <div className="absolute bottom-10 left-10 text-white">
                 <div className="flex gap-2 mb-4">
                   <span className="bg-primary px-3 py-1 rounded text-[10px] font-bold tracking-widest uppercase">Espacio Verificado</span>

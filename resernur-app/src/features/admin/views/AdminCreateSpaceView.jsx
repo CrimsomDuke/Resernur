@@ -14,7 +14,6 @@ const INITIAL_FORM = {
   capacity: '',
   location: '',
   userInChargeId: '',
-  selectedFileName: '',
   hasProjector: false,
   hasWifi: true,
   hasAirConditioning: false
@@ -27,6 +26,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [photoHint, setPhotoHint] = useState('');
+  const [selectedImageFiles, setSelectedImageFiles] = useState([]);
   const [encargados, setEncargados] = useState([]);
   const [isLoadingEncargados, setIsLoadingEncargados] = useState(true);
   const [encargadosError, setEncargadosError] = useState('');
@@ -58,10 +58,10 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
       description: editingSpace?.description || '',
       capacity: editingSpace?.capacity ? String(editingSpace.capacity) : '',
       userInChargeId: editingSpace?.userInChargeId ? String(editingSpace.userInChargeId) : '',
-      location: editingSpace?.location || '',
-      selectedFileName: ''
+      location: editingSpace?.location || ''
     }));
 
+    setSelectedImageFiles([]);
     setSuccessMsg('');
     setErrorMsg('');
     setPhotoHint('');
@@ -141,12 +141,13 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
   };
 
   const onSelectPhoto = (event) => {
-    const file = event.target.files?.[0];
-    const fileName = file?.name || '';
-    setForm((prev) => ({ ...prev, selectedFileName: fileName }));
+    const files = Array.from(event.target.files || []);
+    setSelectedImageFiles(files);
 
-    if (fileName) {
-      setPhotoHint(`Foto seleccionada (${fileName}) - la subida real se habilitara despues.`);
+    if (files.length > 0) {
+      const previewNames = files.slice(0, 3).map((file) => file.name).join(', ');
+      const extraLabel = files.length > 3 ? ` y ${files.length - 3} mas` : '';
+      setPhotoHint(`${files.length} imagen(es) seleccionada(s): ${previewNames}${extraLabel}.`);
     } else {
       setPhotoHint('');
     }
@@ -221,6 +222,32 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
         throw new Error(backendMessage);
       }
 
+      let uploadedImageUrls = [];
+      if (selectedImageFiles.length > 0) {
+        const formData = new FormData();
+        selectedImageFiles.forEach((file) => {
+          formData.append('images', file);
+        });
+
+        const imageUploadResponse = await fetch(`http://localhost:5000/api/places/${result.id}/images`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        if (!imageUploadResponse.ok) {
+          throw new Error('El espacio se creo, pero no se pudieron subir las imagenes.');
+        }
+
+        const imageUploadData = await imageUploadResponse.json().catch(() => ({}));
+        const imageContent = imageUploadData?.content || imageUploadData?.data?.content || [];
+        uploadedImageUrls = Array.isArray(imageContent)
+          ? imageContent.map((item) => item?.url).filter(Boolean)
+          : [];
+      }
+
       const previewItem = {
       id: result.id,
       name: result.name,
@@ -229,7 +256,8 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
       userInChargeId: result.userInChargeId,
       userInChargeName: encargadosById[result.userInChargeId] || 'Encargado asignado',
       capacity: result.capacity,
-      image: finalImage,
+      image: uploadedImageUrls[0] || finalImage,
+      images: uploadedImageUrls.length > 0 ? uploadedImageUrls : [finalImage],
       equipment: [
         form.hasProjector ? 'Proyector' : null,
         form.hasWifi ? 'Wi-Fi' : null,
@@ -257,6 +285,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
           message: `Se creo el espacio "${result.name}".`
         });
         setForm(INITIAL_FORM);
+        setSelectedImageFiles([]);
       }
     } catch (error) {
       setErrorMsg(error.message || 'No se pudo guardar el espacio.');
@@ -378,15 +407,16 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
             </label>
 
             <label className="block">
-              <span className="text-xs uppercase tracking-widest font-bold text-on-surface-variant">Foto del espacio (proximamente)</span>
+              <span className="text-xs uppercase tracking-widest font-bold text-on-surface-variant">Fotos del espacio</span>
               <input
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={onSelectPhoto}
                 className="mt-2 w-full rounded-lg border border-outline-variant px-3 py-2 bg-white"
               />
               <p className="text-xs text-on-surface-variant mt-1">
-                Por ahora solo muestra el nombre del archivo, aun no se sube al servidor. Mientras tanto, se asigna una imagen por defecto automaticamente.
+                Puedes elegir una o varias imagenes. Se subiran al backend cuando guardes el espacio.
               </p>
             </label>
 
