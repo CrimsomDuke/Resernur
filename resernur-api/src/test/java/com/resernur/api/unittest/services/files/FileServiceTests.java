@@ -49,7 +49,9 @@ public class FileServiceTests {
         fileEntity.setId(1);
         fileEntity.setFilePath("test.png");
         when(fileRepository.save(any(File.class))).thenReturn(fileEntity);
+
         StandardResult<File> result = fileService.saveFile(multipartFile);
+
         assertTrue(result.isSuccess());
         assertNotNull(result.getData());
         assertEquals(fileEntity.getId(), result.getData().getId());
@@ -59,7 +61,9 @@ public class FileServiceTests {
     @Test
     void saveFile_InvalidFile() throws IOException {
         when(multipartFile.isEmpty()).thenReturn(true);
+
         StandardResult<File> result = fileService.saveFile(multipartFile);
+
         assertFalse(result.isSuccess());
         assertTrue(result.getErrorMessage().contains("No file provided"));
         verify(fileRepository, never()).save(any());
@@ -71,7 +75,9 @@ public class FileServiceTests {
         fileEntity.setId(2);
         fileEntity.setFilePath("file2.png");
         when(fileRepository.findById(eq(2))).thenReturn(Optional.of(fileEntity));
+
         StandardResult<File> result = fileService.getFileById(2);
+
         assertTrue(result.isSuccess());
         assertNotNull(result.getData());
         assertEquals(2, result.getData().getId());
@@ -81,7 +87,9 @@ public class FileServiceTests {
     @Test
     void getFileById_NotFound() {
         when(fileRepository.findById(eq(99))).thenReturn(Optional.empty());
+
         StandardResult<File> result = fileService.getFileById(99);
+
         assertFalse(result.isSuccess());
         assertNull(result.getData());
         assertTrue(result.getErrorMessage().contains("not found"));
