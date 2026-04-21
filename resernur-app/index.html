@@ -4,7 +4,87 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>resernur-app</title>
+    <title>ScholarFlow - Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'on-error': '#ffffff',
+              'on-background': '#191c1e',
+              'on-surface': '#191c1e',
+              'surface-dim': '#d8dadc',
+              outline: '#737780',
+              'surface-tint': '#3a5f94',
+              'on-secondary-fixed-variant': '#324864',
+              'inverse-on-surface': '#eff1f3',
+              'surface-container-highest': '#e0e3e5',
+              'outline-variant': '#c3c6d1',
+              'primary-container': '#003366',
+              'primary-fixed': '#d5e3ff',
+              'secondary-container': '#c5dcfe',
+              'on-tertiary-fixed-variant': '#723610',
+              tertiary: '#381300',
+              'on-tertiary-container': '#d8885c',
+              'on-primary-fixed-variant': '#1f477b',
+              'primary-fixed-dim': '#a7c8ff',
+              primary: '#001e40',
+              'on-primary-fixed': '#001b3c',
+              'on-primary': '#ffffff',
+              'surface-container-low': '#f2f4f6',
+              'on-tertiary': '#ffffff',
+              'on-secondary-fixed': '#021c36',
+              'on-error-container': '#93000a',
+              'surface-variant': '#e0e3e5',
+              'on-primary-container': '#799dd6',
+              'secondary-fixed': '#d3e4ff',
+              error: '#ba1a1a',
+              'surface-bright': '#f8f9fb',
+              surface: '#f8f9fb',
+              'error-container': '#ffdad6',
+              'inverse-primary': '#a7c8ff',
+              'surface-container-high': '#e6e8ea',
+              'on-secondary': '#ffffff',
+              'inverse-surface': '#2d3133',
+              'tertiary-fixed-dim': '#ffb690',
+              'surface-container': '#eceef0',
+              secondary: '#4a607d',
+              background: '#f8f9fb',
+              'surface-container-lowest': '#ffffff',
+              'on-surface-variant': '#43474f',
+              'on-tertiary-fixed': '#341100',
+              'secondary-fixed-dim': '#b1c8ea',
+              'on-secondary-container': '#4a607e',
+              'tertiary-fixed': '#ffdbca',
+              'tertiary-container': '#592300',
+            },
+            borderRadius: {
+              DEFAULT: '0.125rem',
+              lg: '0.25rem',
+              xl: '0.5rem',
+              full: '0.75rem',
+            },
+            fontFamily: {
+              headline: ['Manrope'],
+              body: ['Inter'],
+              label: ['Inter'],
+            },
+          },
+        },
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
