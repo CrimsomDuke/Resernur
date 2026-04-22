@@ -49,9 +49,6 @@ public class BookingRequestService {
     private PlaceRepository placeRepository;
 
     @Autowired
-    private PlaceService placeService;
-
-    @Autowired
     private FileService fileService;
 
     @Autowired
