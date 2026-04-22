@@ -25,15 +25,12 @@ export default function AdminSidebar({ items, activeSection, onNavigate }) {
               <button
                 key={item.key}
                 type="button"
-                onClick={() => {
-                  if (isCreateSpace) onNavigate('create-space');
-                }}
+                onClick={() => onNavigate(item.key)}
                 className={`w-full text-left px-4 py-3 rounded-r-full rounded-l-none flex items-center gap-3 transition-colors ${
                   isActive
                     ? 'bg-surface-container-lowest text-primary font-bold shadow-sm'
                     : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'
                 }`}
-                aria-disabled={!isCreateSpace}
               >
                 <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
                 <span className="font-headline text-sm tracking-tight">{item.label}</span>

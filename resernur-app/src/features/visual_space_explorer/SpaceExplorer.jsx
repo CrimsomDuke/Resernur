@@ -27,6 +27,7 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
   useEffect(() => {
     if (!selectedSpace?.id) return;
     setSelectedImageIndex(0);
+    // fetchSpaceImages is a no-op if already fetched (state already has them)
     fetchSpaceImages(selectedSpace.id);
   }, [selectedSpace?.id]);
 
@@ -84,17 +85,17 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
       const resData = await response.json();
       const content = resData.data?.content || resData.content || [];
 
-      const mappedSpaces = content.map((sp, idx) => ({
+      const mappedSpaces = content.map((sp) => ({
         ...sp,
         userInChargeName: userMap[sp.userInChargeId] || "No definido",
-        image: DEFAULT_IMAGES[idx % DEFAULT_IMAGES.length],
-        images: Array.isArray(sp.images) && sp.images.length > 0
-          ? sp.images
-          : [DEFAULT_IMAGES[idx % DEFAULT_IMAGES.length]]
       }));
 
       setSpaces(mappedSpaces);
       setUsersById(userMap);
+
+      // Prefetch images for all spaces in parallel so cards show real images immediately
+      const ids = mappedSpaces.map((sp) => sp.id).filter(Boolean);
+      prefetchAllSpaceImages(ids, token);
     } catch (err) {
       console.error(err);
 
@@ -109,28 +110,26 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
     }
   };
 
-  const fetchSpaceImages = async (spaceId) => {
-    if (!spaceId || spaceImagesById[spaceId]) return;
-
+  const fetchSpaceImages = async (spaceId, token) => {
+    if (!spaceId) return;
     try {
-      const token = localStorage.getItem("resernur_token");
-      const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+      const tok = token || localStorage.getItem("resernur_token");
+      const headers = tok ? { "Authorization": `Bearer ${tok}` } : {};
       const response = await fetch(`http://localhost:5000/api/places/${spaceId}/images?page=0&pageSize=20`, { headers });
-
-      if (!response.ok) {
-        return;
-      }
-
+      if (!response.ok) return;
       const data = await response.json().catch(() => ({}));
       const content = data?.content || data?.data?.content || [];
       const urls = Array.isArray(content)
         ? content.map((item) => item?.url).filter(Boolean)
         : [];
-
       setSpaceImagesById((prev) => ({ ...prev, [spaceId]: urls }));
     } catch {
       // Keep fallback image if image endpoint is unavailable.
     }
+  };
+
+  const prefetchAllSpaceImages = (ids, token) => {
+    ids.forEach((id) => fetchSpaceImages(id, token));
   };
 
   const filteredSpaces = spaces.filter(s => {
@@ -156,9 +155,12 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
     return [];
   };
 
-  const getCoverImage = (space, fallback) => {
+  const getCoverImage = (space) => {
     const images = getImagesForSpace(space);
-    return images[0] || fallback || DEFAULT_IMAGES[0];
+    if (images.length > 0) return images[0];
+    // Deterministic fallback based on space id so each card gets a consistent placeholder
+    const idx = (space?.id ?? 0) % DEFAULT_IMAGES.length;
+    return DEFAULT_IMAGES[idx];
   };
 
   const selectedImages = getImagesForSpace(selectedSpace);
@@ -194,9 +196,9 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
             <h1 className="font-headline text-4xl font-extrabold tracking-tight text-primary">Visualizador de Espacios</h1>
           </div>
           <div className="flex gap-2">
-            <input 
-              type="text" 
-              placeholder="Buscar..." 
+            <input
+              type="text"
+              placeholder="Buscar..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="px-4 py-2 rounded-lg bg-surface-container-highest border-none focus:ring-2 focus:ring-primary"
@@ -229,13 +231,13 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredSpaces.map((space) => (
-              <div 
-                key={space.id} 
+              <div
+                key={space.id}
                 className={`bg-surface-container-lowest rounded-xl overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer ${selectedSpace?.id === space.id ? 'ring-2 ring-primary border-l-4 border-tertiary' : ''}`}
                 onClick={() => setSelectedSpace(space)}
               >
                 <div className="relative h-48">
-                  <img alt={space.name} className="w-full h-full object-cover" src={getCoverImage(space, space.image)}/>
+                  <img alt={space.name} className="w-full h-full object-cover" src={getCoverImage(space)} />
                   <div className="absolute top-4 left-4">
                     <span className="glass-card px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-primary border border-white/20">{space.capacity} Pax</span>
                   </div>
@@ -274,7 +276,7 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
               onMouseEnter={() => setIsCarouselPaused(true)}
               onMouseLeave={() => setIsCarouselPaused(false)}
             >
-              <img alt={selectedSpace.name} className="absolute inset-0 w-full h-full object-cover" src={selectedImage}/>
+              <img alt={selectedSpace.name} className="absolute inset-0 w-full h-full object-cover" src={selectedImage} />
               <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
 
               {selectedImages.length > 1 && (
@@ -380,7 +382,7 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
                     Editar informacion del espacio
                   </button>
                 )}
-                <button 
+                <button
                   onClick={() => onReserve(selectedSpace)}
                   className="w-full bg-primary-container text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary-container/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 group"
                 >

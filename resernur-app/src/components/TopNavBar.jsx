@@ -13,12 +13,12 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
   const notificationPanelRef = useRef(null);
 
   const unreadCount = useMemo(() => {
-    return getUnreadLocalNotificationsCount();
-  }, [notifications]);
+    return getUnreadLocalNotificationsCount(isAdmin);
+  }, [notifications, isAdmin]);
 
   useEffect(() => {
     const refresh = () => {
-      setNotifications(getLocalNotifications());
+      setNotifications(getLocalNotifications(isAdmin));
     };
 
     refresh();
@@ -42,7 +42,7 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
     const nextOpen = !isNotificationsOpen;
     setIsNotificationsOpen(nextOpen);
     if (nextOpen) {
-      markAllLocalNotificationsAsRead();
+      markAllLocalNotificationsAsRead(isAdmin);
     }
   };
 

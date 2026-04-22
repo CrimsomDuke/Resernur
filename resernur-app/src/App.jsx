@@ -119,7 +119,7 @@ function App() {
         isAdmin={userRole === ADMIN_ROLE}
       />
       
-      <main style={{ padding: '2rem' }}>
+      <main style={{ padding: '2rem', paddingTop: '6rem' }}>
         {currentView === "explorer" && (
           <SpaceExplorer
             onReserve={handleReserveSpace}

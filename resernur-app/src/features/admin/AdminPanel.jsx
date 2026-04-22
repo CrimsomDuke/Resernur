@@ -3,13 +3,15 @@ import AdminSidebar from './components/AdminSidebar';
 import AdminTopbar from './components/AdminTopbar';
 import AdminDashboardView from './views/AdminDashboardView';
 import AdminCreateSpaceView from './views/AdminCreateSpaceView';
+import AdminRequestsView from './views/AdminRequestsView';
+import AdminBookingsView from './views/AdminBookingsView';
 
 const MENU_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { key: 'requests', label: 'Solicitudes', icon: 'pending_actions' },
   { key: 'reservations', label: 'Reservas', icon: 'event_seat' },
   { key: 'resources', label: 'Recursos', icon: 'domain' },
   { key: 'create-space', label: 'Crear espacios', icon: 'add_business' },
-  { key: 'system-health', label: 'Salud del sistema', icon: 'monitor_heart' },
   { key: 'analytics', label: 'Analitica', icon: 'insights' }
 ];
 
@@ -28,7 +30,15 @@ export default function AdminPanel({ editingSpace = null, onEditHandled }) {
 
   const renderSection = () => {
     if (activeSection === 'dashboard') {
-      return <AdminDashboardView onCreateForm={() => setActiveSection('create-space')} />;
+      return <AdminDashboardView onNavigate={setActiveSection} />;
+    }
+
+    if (activeSection === 'requests') {
+      return <AdminRequestsView />;
+    }
+
+    if (activeSection === 'reservations') {
+      return <AdminBookingsView />;
     }
 
     if (activeSection === 'create-space') {

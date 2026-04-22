@@ -45,15 +45,25 @@ function emitChange() {
   }
 }
 
-export function getLocalNotifications() {
+export function getLocalNotifications(isAdmin = false) {
   const store = readStore();
   const userKey = getCurrentUserKey();
-  const list = Array.isArray(store[userKey]) ? store[userKey] : [];
-  return [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  let list = Array.isArray(store[userKey]) ? store[userKey] : [];
+
+  if (isAdmin) {
+    const adminList = Array.isArray(store['GLOBAL_ADMIN']) ? store['GLOBAL_ADMIN'] : [];
+    list = [...list, ...adminList];
+  }
+
+  // Deduplicate in case a user is both (somehow)
+  const uniqueUrls = Array.from(new Set(list.map(n => n.id)))
+    .map(id => list.find(n => n.id === id));
+
+  return uniqueUrls.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-export function getUnreadLocalNotificationsCount() {
-  return getLocalNotifications().filter((item) => !item.isRead).length;
+export function getUnreadLocalNotificationsCount(isAdmin = false) {
+  return getLocalNotifications(isAdmin).filter((item) => !item.isRead).length;
 }
 
 export function addLocalNotification({ type, message }) {
@@ -76,12 +86,36 @@ export function addLocalNotification({ type, message }) {
   emitChange();
 }
 
-export function markAllLocalNotificationsAsRead() {
+export function addAdminNotification({ type, message }) {
+  if (!message || !String(message).trim()) return;
+
+  const notification = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    type: type || 'ADMIN',
+    message: String(message).trim(),
+    isRead: false,
+    createdAt: new Date().toISOString()
+  };
+
+  const store = readStore();
+  const adminList = Array.isArray(store['GLOBAL_ADMIN']) ? store['GLOBAL_ADMIN'] : [];
+
+  store['GLOBAL_ADMIN'] = [notification, ...adminList].slice(0, 50);
+  writeStore(store);
+  emitChange();
+}
+
+export function markAllLocalNotificationsAsRead(isAdmin = false) {
   const store = readStore();
   const userKey = getCurrentUserKey();
   const currentList = Array.isArray(store[userKey]) ? store[userKey] : [];
-
   store[userKey] = currentList.map((item) => ({ ...item, isRead: true }));
+
+  if (isAdmin) {
+    const adminList = Array.isArray(store['GLOBAL_ADMIN']) ? store['GLOBAL_ADMIN'] : [];
+    store['GLOBAL_ADMIN'] = adminList.map((item) => ({ ...item, isRead: true }));
+  }
+
   writeStore(store);
   emitChange();
 }
