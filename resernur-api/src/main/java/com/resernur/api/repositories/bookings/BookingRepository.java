@@ -39,4 +39,16 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
 
     @Query("SELECT b FROM Booking b WHERE (b.status = 'CANCELLED' OR b.status = 'REJECTED') AND b.startTime >= :from AND b.endTime <= :to")
     List<Booking> findCancelledOrRejected(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("SELECT b FROM Booking b " +
+            "WHERE (:status IS NULL OR b.status = :status) " +
+            "AND (:userId IS NULL OR b.bookingRequest.user.id = :userId) " +
+            "AND (:isOngoing = false OR (b.startTime <= :now AND b.endTime >= :now))")
+    Page<Booking> findByDynamicFilters(
+            @Param("status") BookingStatus status,
+            @Param("userId") Integer userId,
+            @Param("isOngoing") boolean isOngoing,
+            @Param("now") LocalDateTime now,
+            Pageable pageable
+    );
 }
