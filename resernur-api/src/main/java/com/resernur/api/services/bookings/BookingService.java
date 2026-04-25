@@ -60,38 +60,29 @@ public class BookingService {
 
     // Search bookings with optional filters: status, user requester id, ongoing flag
     public PagedResponse<BookingDTO> search(SearchQuery query, BookingStatus status, Integer userId, Boolean ongoing) {
-        int page = Math.max(0, query == null ? 0 : query.page);
-        int pageSize = Math.max(1, query == null ? 10 : query.pageSize);
-        Pageable pageable = PageRequest.of(page, pageSize);
-        Page<Booking> pageResult;
-        LocalDateTime now = LocalDateTime.now();
+        Pageable pageable = PageRequest.of(
+                Math.max(0, query == null ? 0 : query.page),
+                Math.max(1, query == null ? 10 : query.pageSize)
+        );
 
         boolean isOngoing = ongoing != null && ongoing;
 
-        if (isOngoing) {
-            if (status != null && userId != null) {
-                pageResult = bookingRepository.findByBookingRequest_User_IdAndStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(userId, status, now, now, pageable);
-            } else if (status != null) {
-                pageResult = bookingRepository.findByStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(status, now, now, pageable);
-            } else if (userId != null) {
-                pageResult = bookingRepository.findByBookingRequest_User_IdAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(userId, now, now, pageable);
-            } else {
-                pageResult = bookingRepository.findByStartTimeLessThanEqualAndEndTimeGreaterThanEqual(now, now, pageable);
-            }
-        } else {
-            if (status != null && userId != null) {
-                pageResult = bookingRepository.findByBookingRequest_User_IdAndStatus(userId, status, pageable);
-            } else if (status != null) {
-                pageResult = bookingRepository.findByStatus(status, pageable);
-            } else if (userId != null) {
-                pageResult = bookingRepository.findByBookingRequest_User_Id(userId, pageable);
-            } else {
-                pageResult = bookingRepository.findAll(pageable);
-            }
-        }
+        // One simple call, the database handles the "if/else" logic via the WHERE clause
+        Page<Booking> pageResult = bookingRepository.findByDynamicFilters(
+                status,
+                userId,
+                isOngoing,
+                LocalDateTime.now(),
+                pageable
+        );
 
-        var content = pageResult.getContent().stream().map(this::toDTO).collect(Collectors.toList());
-        return new PagedResponse<>(content, pageResult.getNumber(), pageResult.getSize(), pageResult.getTotalElements(), pageResult.getTotalPages(), pageResult.isLast(), true, "");
+        var content = pageResult.getContent().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+
+        return new PagedResponse<>(content, pageResult.getNumber(), pageResult.getSize(),
+                pageResult.getTotalElements(), pageResult.getTotalPages(),
+                pageResult.isLast(), true, "");
     }
 
     // Cancel a booking
@@ -116,6 +107,7 @@ public class BookingService {
         dto.setStatus(b.getStatus());
         dto.setActivityType(b.getActivityType());
 
+        dto.calculateOngoing(); // dinamicamente determina si está en curso o no
         dto.setBookingRequest(b.getBookingRequest() != null ? toBookingRequestDTO(b.getBookingRequest()) : null);
         return dto;
     }

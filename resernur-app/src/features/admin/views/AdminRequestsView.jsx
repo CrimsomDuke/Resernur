@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { addAdminNotification } from '../../../utils/notificationCenter';
+import { addAdminNotification, addLocalNotification } from '../../../utils/notificationCenter';
 
 const API = 'http://localhost:5000';
 
@@ -47,6 +47,7 @@ const STATUS_LABELS = {
 
 export default function AdminRequestsView() {
   const [requests, setRequests] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('PENDING');
   const [totalPending, setTotalPending] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -78,7 +79,7 @@ export default function AdminRequestsView() {
     setError(null);
     try {
       const res = await fetch(
-        `${API}/api/booking-requests?status=PENDING&page=${p}&pageSize=${PAGE_SIZE}`,
+        `${API}/api/booking-requests?status=${statusFilter}&page=${p}&pageSize=${PAGE_SIZE}`,
         { headers: authHeaders() }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -92,7 +93,7 @@ export default function AdminRequestsView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statusFilter]);
 
   useEffect(() => { fetchRequests(0); }, [fetchRequests]);
 
@@ -128,6 +129,14 @@ export default function AdminRequestsView() {
     setDetailLoading(false);
   };
 
+  // Prefetch names for the table
+  useEffect(() => {
+    requests.forEach(req => {
+      fetchUser(req.userId);
+      fetchPlace(req.placeId);
+    });
+  }, [requests, fetchUser, fetchPlace]);
+
   // ---------------------------------------------------------------------------
   // Actions: accept / reject / request-changes
   // ---------------------------------------------------------------------------
@@ -149,6 +158,9 @@ export default function AdminRequestsView() {
         type: 'REQUEST_ACCEPTED',
         message: `Has aceptado la solicitud de reserva para el ${placeName}.`,
       });
+      if (req) {
+        addLocalNotification(req.userId, 'SYSTEM', `¡Buenas noticias! Tu solicitud de reserva para ${placeName} ha sido APROBADA.`);
+      }
 
       setSelectedReq(null);
       fetchRequests(page);
@@ -193,6 +205,15 @@ export default function AdminRequestsView() {
           ? `Has solicitado cambios en la reserva del ${placeName}.` 
           : `Has rechazado la solicitud de reserva del ${placeName}.`
       });
+      if (req) {
+        addLocalNotification(
+          req.userId,
+          'SYSTEM',
+          type === 'changes'
+            ? `Se han solicitado cambios en tu reserva para ${placeName}. Motivo: ${rejectReason}`
+            : `Tu solicitud de reserva para ${placeName} ha sido RECHAZADA. Motivo: ${rejectReason}`
+        );
+      }
 
       setSelectedReq(null);
       setRejectModal(null);
@@ -256,11 +277,34 @@ export default function AdminRequestsView() {
           </h2>
           {!loading && (
             <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', fontSize: '0.875rem', color: 'var(--color-on-surface-variant, #43474f)', fontWeight: 500 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#d97706', display: 'inline-block' }} />
-              {totalPending} Solicitudes pendientes de revisión
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusFilter === 'PENDING' ? '#d97706' : (statusFilter === 'REJECTED' ? '#dc2626' : '#7c3aed'), display: 'inline-block' }} />
+              {totalPending} {statusFilter === 'PENDING' ? 'Solicitudes pendientes' : (statusFilter === 'REJECTED' ? 'Solicitudes rechazadas' : 'Cambios solicitados')}
             </p>
           )}
         </div>
+      </div>
+
+      {/* ── Status Tabs ── */}
+      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--color-surface-container-high, #e6e8ea)' }}>
+        {[
+          { id: 'PENDING', label: 'Pendientes' },
+          { id: 'REJECTED', label: 'Rechazadas' },
+          { id: 'CHANGES_REQUESTED', label: 'Cambios Solicitados' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => { setStatusFilter(tab.id); setSelectedReq(null); }}
+            style={{
+              padding: '0.75rem 1rem', background: 'none', border: 'none',
+              borderBottom: statusFilter === tab.id ? '3px solid var(--color-primary, #001e40)' : '3px solid transparent',
+              color: statusFilter === tab.id ? 'var(--color-primary, #001e40)' : 'var(--color-on-surface-variant, #43474f)',
+              fontWeight: statusFilter === tab.id ? 800 : 600,
+              cursor: 'pointer', fontSize: '0.875rem', transition: 'all 0.2s'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* ── Two-column layout ── */}
@@ -376,35 +420,41 @@ export default function AdminRequestsView() {
 
                             {/* Actions */}
                             <td style={{ padding: '1rem 1.25rem' }}>
-                              <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-start' }} onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  title="Aprobar"
-                                  onClick={() => handleAccept(req.id)}
-                                  style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#d1fae5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#059669'; e.currentTarget.style.color = '#fff'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.background = '#d1fae5'; e.currentTarget.style.color = '#059669'; }}
-                                >
-                                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check</span>
-                                </button>
-                                <button
-                                  title="Rechazar"
-                                  onClick={() => handleOpenReject(req.id, 'reject')}
-                                  style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = '#fff'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#dc2626'; }}
-                                >
-                                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
-                                </button>
-                                <button
-                                  title="Pedir cambios"
-                                  onClick={() => handleOpenReject(req.id, 'changes')}
-                                  style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#ede9fe', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.color = '#fff'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.color = '#7c3aed'; }}
-                                >
-                                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_note</span>
-                                </button>
-                              </div>
+                              {statusFilter === 'PENDING' ? (
+                                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-start' }} onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    title="Aprobar"
+                                    onClick={() => handleAccept(req.id)}
+                                    style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#d1fae5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#059669'; e.currentTarget.style.color = '#fff'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#d1fae5'; e.currentTarget.style.color = '#059669'; }}
+                                  >
+                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check</span>
+                                  </button>
+                                  <button
+                                    title="Rechazar"
+                                    onClick={() => handleOpenReject(req.id, 'reject')}
+                                    style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = '#fff'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#dc2626'; }}
+                                  >
+                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+                                  </button>
+                                  <button
+                                    title="Pedir cambios"
+                                    onClick={() => handleOpenReject(req.id, 'changes')}
+                                    style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#ede9fe', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.color = '#fff'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.color = '#7c3aed'; }}
+                                  >
+                                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit_note</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ display: 'inline-block', padding: '0.25rem 0.5rem', borderRadius: 4, background: STATUS_LABELS[req.status]?.bg || '#f3f4f6', color: STATUS_LABELS[req.status]?.color || '#4b5563', fontWeight: 700, fontSize: '0.65rem', textTransform: 'uppercase' }}>
+                                  {STATUS_LABELS[req.status]?.label || req.status}
+                                </span>
+                              )}
                             </td>
                           </tr>
                         );

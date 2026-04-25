@@ -13,7 +13,7 @@ public class BookingRequestCreateDTO {
     private int userId;
     private int placeId;
     private String reason;
-    private ActivityType activityType;
+    private ActivityType activityType = ActivityType.OTRO;
 
     @DateTimeFormat(iso =  DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime requestedStartTime;

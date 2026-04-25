@@ -38,8 +38,7 @@ function initials(name) {
 }
 
 const STATUS_LABELS = {
-  ACTIVE: { label: 'Activa', color: '#059669', bg: '#d1fae5' },
-  COMPLETED: { label: 'Completada', color: '#4b5563', bg: '#f3f4f6' },
+  COMPLETED: { label: 'Aprobada', color: '#059669', bg: '#d1fae5' }, // Green instead of gray
   CANCELLED: { label: 'Cancelada', color: '#dc2626', bg: '#fee2e2' },
 };
 
@@ -68,7 +67,7 @@ export default function AdminBookingsView() {
     setError(null);
     try {
       const res = await fetch(
-        `${API}/api/bookings?ongoing=true&page=${p}&pageSize=${PAGE_SIZE}`,
+        `${API}/api/bookings?status=COMPLETED&page=${p}&pageSize=${PAGE_SIZE}`,
         { headers: authHeaders() }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -108,14 +107,21 @@ export default function AdminBookingsView() {
     } catch { /* silently ignore */ }
   }, [placeCache]);
 
+  // Prefetch names for the table
+  useEffect(() => {
+    bookings.forEach(bk => {
+      if (bk.bookingRequest?.userId) fetchUser(bk.bookingRequest.userId);
+      fetchPlace(bk.placeId);
+    });
+  }, [bookings, fetchUser, fetchPlace]);
+
   const handleSelectBooking = async (bk) => {
     setSelectedBooking(bk);
     setDetailLoading(true);
-    // User comes from booking.bookingRequest.userId
-    const userId = bk.bookingRequest?.userId;
-    const promises = [fetchPlace(bk.placeId)];
-    if (userId) promises.push(fetchUser(userId));
-    await Promise.all(promises);
+    await Promise.all([
+      bk.bookingRequest?.userId ? fetchUser(bk.bookingRequest.userId) : Promise.resolve(),
+      fetchPlace(bk.placeId)
+    ]);
     setDetailLoading(false);
   };
 
