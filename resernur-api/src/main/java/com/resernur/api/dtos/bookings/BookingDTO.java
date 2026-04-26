@@ -16,5 +16,11 @@ public class BookingDTO {
     private LocalDateTime endTime;
     private BookingStatus status;
     private ActivityType activityType;
+    private boolean isOngoing = false; // dinamicamente piesto con toDTO
+
+    public void calculateOngoing() {
+        LocalDateTime now = LocalDateTime.now();
+        this.isOngoing = (startTime.isBefore(now) || startTime.isEqual(now)) && (endTime.isAfter(now) || endTime.isEqual(now));
+    }
 }
 
