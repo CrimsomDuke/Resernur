@@ -67,7 +67,6 @@ public class BookingService {
 
         boolean isOngoing = ongoing != null && ongoing;
 
-        // One simple call, the database handles the "if/else" logic via the WHERE clause
         Page<Booking> pageResult = bookingRepository.findByDynamicFilters(
                 status,
                 userId,
