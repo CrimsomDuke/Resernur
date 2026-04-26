@@ -2,8 +2,7 @@ package com.resernur.api.utils.components.bookings;
 
 import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
-import com.resernur.api.dtos.pojos.CustomError;
-import com.resernur.api.dtos.pojos.StandardResult;
+import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.BookingRequestStatus;
 import com.resernur.api.models.places.Place;
@@ -23,35 +22,35 @@ public class BookingRequestValidationComponent {
 
     private final DateUtils dateUtils = new DateUtils();
 
-    public CustomError validateUserAndPlaceExistance(Optional<User> userOpt, Optional<Place> placeOpt) {
+    public void validateUserAndPlaceExistance(Optional<User> userOpt, Optional<Place> placeOpt) throws ResernurException {
         if (userOpt.isEmpty()) {
-            return new CustomError("Usuario no encontrado");
+            throw new ResernurException("Usuario no encontrado");
         }
 
         // Validar lugar
         if (placeOpt.isEmpty()) {
-            return new CustomError("Lugar no encontrado");
+            throw new ResernurException("Lugar no encontrado");
         }
 
-        return null;
+        // éxito: no hace nada
     }
 
-    public CustomError validateBookingTimes(LocalDateTime requestCreatedTime,
-                                            LocalDateTime requestedStartTime,
-                                            LocalDateTime requestedEndTime,
-                                            ConfigurationProvider configProvider) {
+    public void validateBookingTimes(LocalDateTime requestCreatedTime,
+                                     LocalDateTime requestedStartTime,
+                                     LocalDateTime requestedEndTime,
+                                     ConfigurationProvider configProvider) throws ResernurException {
 
         //VALIDACIONES SIMPLONAS
         if (requestedStartTime == null || requestedEndTime == null) {
-            return new CustomError("Las fechas de inicio y fin son obligatorias");
+            throw new ResernurException("Las fechas de inicio y fin son obligatorias");
         }
 
         if (requestedStartTime.isAfter(requestedEndTime)) {
-            return new CustomError("La fecha de inicio no puede ser posterior a la fecha de fin");
+            throw new ResernurException("La fecha de inicio no puede ser posterior a la fecha de fin");
         }
 
         if (requestedStartTime.isBefore(LocalDateTime.now())) {
-            return new CustomError("La fecha de inicio no puede ser en el pasado");
+            throw new ResernurException("La fecha de inicio no puede ser en el pasado");
         }
 
         //VALIDACIONES COMPLEJAS
@@ -67,24 +66,24 @@ public class BookingRequestValidationComponent {
         // horas maximas
         long hoursBetween = dateUtils.hoursBetweenDates(requestedStartTime, requestedEndTime);
         if(hoursBetween > MAX_RESERVATION_HOURS){
-            return new CustomError("La duración máxima de una reserva es de " + MAX_RESERVATION_HOURS + " horas");
+            throw new ResernurException("La duración máxima de una reserva es de " + MAX_RESERVATION_HOURS + " horas");
         }
 
         //Dias de previsión
         long daysBetween = dateUtils.daysBetweenDates(requestCreatedTime, requestedStartTime);
         if(daysBetween < MIN_ADVANCED_DAYS){
-            return new CustomError("Las reservas deben hacerse con al menos " + MIN_ADVANCED_DAYS + " días de anticipación");
+            throw new ResernurException("Las reservas deben hacerse con al menos " + MIN_ADVANCED_DAYS + " días de anticipación");
         }
 
         //Reserva se encuentra en horarios disponibles
         if(!dateUtils.DatesSpanInBetweenHours(startTimeCustom, endTimeCustom, OPENING_TIME, CLOSING_TIME)){
-            return new CustomError("Las reservas deben estar dentro del horario de atención: " + OPENING_TIME + " a " + CLOSING_TIME);
+            throw new ResernurException("Las reservas deben estar dentro del horario de atención: " + OPENING_TIME + " a " + CLOSING_TIME);
         }
 
-        return null;
+        // éxito: no hace nada
     }
 
-    public CustomError validateOverlappingOnCreate(BookingRequestCreateDTO dto, BookingRequestRepository bookingRequestRepository){
+    public void validateOverlappingOnCreate(BookingRequestCreateDTO dto, BookingRequestRepository bookingRequestRepository) throws ResernurException {
         List<BookingRequestStatus> checkStatuses = List.of(
                 BookingRequestStatus.ACCEPTED
         );
@@ -92,31 +91,31 @@ public class BookingRequestValidationComponent {
                 dto.getPlaceId(), checkStatuses, dto.getRequestedEndTime(), dto.getRequestedStartTime()
         );
         if (overlaps != null && !overlaps.isEmpty()) {
-            return new CustomError("Ya hay reservas en esta ventana de tiempo para este lugar");
+            throw new ResernurException("Ya hay reservas en esta ventana de tiempo para este lugar");
         }
 
-        return null;
+        // éxito: no hace nada
     }
 
-    public CustomError validateUpdateRequestFields(BookingRequestUpdateDTO dto, BookingRequest req){
+    public void validateUpdateRequestFields(BookingRequestUpdateDTO dto, BookingRequest req) throws ResernurException {
         //Only can update on changesReqeestedd
         if(req.getStatus() != BookingRequestStatus.CHANGES_REQUESTED){
-            return new CustomError("Solo solicitudes con status 'CHANGES_REQUESTED' pueden ser modificadas");
+            throw new ResernurException("Solo solicitudes con status 'CHANGES_REQUESTED' pueden ser modificadas");
         }
 
         // Check ownership
         if (req.getUser() == null || req.getUser().getId().intValue() != dto.getUserId()) {
-            return new CustomError("No autorizado, solo quien solicitó puede hacer cambios");
+            throw new ResernurException("No autorizado, solo quien solicitó puede hacer cambios");
         }
         // Only allow updates when not accepted
         if (req.getStatus() == BookingRequestStatus.ACCEPTED) {
-            return new CustomError("No se puede modificar una solicitud aceptada");
+            throw new ResernurException("No se puede modificar una solicitud aceptada");
         }
 
-        return null;
+        // éxito: no hace nada
     }
 
-    public CustomError validateOverlappingOnUpdate(BookingRequestUpdateDTO dto, BookingRequest req, BookingRequestRepository bookingRequestRepository){
+    public void validateOverlappingOnUpdate(BookingRequestUpdateDTO dto, BookingRequest req, BookingRequestRepository bookingRequestRepository) throws ResernurException {
         List<BookingRequestStatus> checkStatuses = List.of(BookingRequestStatus.ACCEPTED);
         var overlaps = bookingRequestRepository.findByPlace_IdAndStatusInAndRequestedStartTimeLessThanEqualAndRequestedEndTimeGreaterThanEqual(
                 req.getPlace().getId(), checkStatuses, dto.getRequestedEndTime(), dto.getRequestedStartTime()
@@ -124,10 +123,9 @@ public class BookingRequestValidationComponent {
         // exclude self
         boolean conflict = overlaps.stream().anyMatch(r -> r.getId() != req.getId());
         if (conflict) {
-            return new CustomError("El tiempo solicitda conlfictua con otras reservas ya aceptadas");
+            throw new ResernurException("El tiempo solicitda conlfictua con otras reservas ya aceptadas");
         }
 
-        return null;
+        // éxito: no hace nada
     }
-
 }

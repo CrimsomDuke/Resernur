@@ -5,6 +5,7 @@ import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestDTO;
 import com.resernur.api.dtos.bookings.BookingRequestReasonBodyDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
+import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.enums.ActivityType;
@@ -49,7 +50,7 @@ public class BookingRequestControllerTests {
     }
 
     @Test
-    public void create_WhenServiceReturnsSuccess_ShouldReturnCreated() {
+    public void create_WhenServiceReturnsSuccess_ShouldReturnCreated() throws ResernurException {
         BookingRequestCreateDTO dto = new BookingRequestCreateDTO();
         dto.setUserId(1);
         dto.setPlaceId(2);
@@ -77,7 +78,7 @@ public class BookingRequestControllerTests {
     }
 
     @Test
-    public void create_WhenServiceReturnsFailure_ShouldReturnBadRequest() {
+    public void create_WhenServiceReturnsFailure_ShouldReturnBadRequest() throws ResernurException {
         BookingRequestCreateDTO dto = new BookingRequestCreateDTO();
         dto.setUserId(1);
         dto.setPlaceId(2);
@@ -186,7 +187,7 @@ public class BookingRequestControllerTests {
     }
 
     @Test
-    public void testUpdateByRequester_Success() {
+    public void testUpdateByRequester_Success() throws ResernurException {
         int requestId = 12;
         BookingRequestDTO returned = new BookingRequestDTO();
         returned.setId(requestId);
@@ -202,7 +203,7 @@ public class BookingRequestControllerTests {
     }
 
     @Test
-    public void testUpdateByRequester_NotFound() {
+    public void testUpdateByRequester_NotFound() throws ResernurException {
         int requestId = 12;
         BookingRequestUpdateDTO updateDTO = new BookingRequestUpdateDTO();
         updateDTO.setId(requestId);

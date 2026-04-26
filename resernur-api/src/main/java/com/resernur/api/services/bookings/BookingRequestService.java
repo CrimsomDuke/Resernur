@@ -4,6 +4,7 @@ import com.resernur.api.dtos.bookings.BookingDTO;
 import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
+import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.dtos.pojos.CustomError;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
@@ -66,33 +67,20 @@ public class BookingRequestService {
 
     // Create booking request with overlap validation
     @Transactional
-    public StandardResult<BookingRequestDTO> createBookingRequest(BookingRequestCreateDTO dto, int userId) {
+    public StandardResult<BookingRequestDTO> createBookingRequest(BookingRequestCreateDTO dto, int userId) throws ResernurException {
         // Validar datos de entrada
         if (dto.containsMissingFields()) {
-            return new StandardResult<>(false, "Missing required fields", null);
+            throw new ResernurException("Faltan campos requeridos ");
         }
 
         // Validar usuario
         var userOpt = userRepository.findById((long) dto.getUserId());
         var placeOpt = placeRepository.findById(dto.getPlaceId());
-
-        CustomError customError = validationComponent.validateUserAndPlaceExistance(userOpt, placeOpt);
-        if(customError != null){
-            return new StandardResult<>(false, customError.getMessage(), null);
-        }
-
+        validationComponent.validateUserAndPlaceExistance(userOpt, placeOpt);
         // Validar fechas
-        customError = validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
-        if(customError != null){
-            return new StandardResult<>(false, customError.getMessage(), null);
-        }
-
+        validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
         // Validar solapamientos: no debe haber otras requests en ESE periodo para el mismo lugar
-        customError = validationComponent.validateOverlappingOnCreate(dto, bookingRequestRepository);
-        if(customError != null){
-            return new StandardResult<>(false, customError.getMessage(), null);
-        }
-
+        validationComponent.validateOverlappingOnCreate(dto, bookingRequestRepository);
         // Crear entidad y guardar
         BookingRequest bookingRequest = new BookingRequest();
         bookingRequest.setUser(userOpt.get());
@@ -160,29 +148,18 @@ public class BookingRequestService {
 
     // Update by requester: can change time interval and reason
     @Transactional
-    public StandardResult<BookingRequestDTO> updateByRequester(int id, BookingRequestUpdateDTO dto, int userId) {
+    public StandardResult<BookingRequestDTO> updateByRequester(int id, BookingRequestUpdateDTO dto, int userId) throws ResernurException {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(id);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
 
-        CustomError customError = validationComponent.validateUpdateRequestFields(dto, req);
-        if(customError != null){
-            return new StandardResult<>(false, customError.getMessage(), null);
-        }
+        validationComponent.validateUpdateRequestFields(dto, req);
 
         // Validate dates if provided
         if (dto.getRequestedStartTime() != null && dto.getRequestedEndTime() != null) {
-            customError = validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
-            if(customError != null) {
-                return new StandardResult<>(false, customError.getMessage(), null);
-            }
+            validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
 
-            // Check overlaps with accepted bookings
-            customError = validationComponent.validateOverlappingOnUpdate(dto, req, bookingRequestRepository);
-            if(customError != null){
-                return new StandardResult<>(false, customError.getMessage(), null);
-            }
-
+            validationComponent.validateOverlappingOnUpdate(dto, req, bookingRequestRepository);
             req.setRequestedStartTime(dto.getRequestedStartTime());
             req.setRequestedEndTime(dto.getRequestedEndTime());
         }

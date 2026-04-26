@@ -3,6 +3,7 @@ package com.resernur.api.controllers.bookings;
 import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
+import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
@@ -26,7 +27,7 @@ public class BookingRequestController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StandardResult<BookingRequestDTO>> create(@ModelAttribute BookingRequestCreateDTO dto,
-                                                                    @AuthenticationPrincipal User user) {
+                                                                    @AuthenticationPrincipal User user) throws ResernurException {
         var res = bookingRequestService.createBookingRequest(dto, user.getId().intValue());
         if (!res.isSuccess()) return ResponseEntity.badRequest().body(res);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
@@ -100,7 +101,7 @@ public class BookingRequestController {
 
     @PutMapping("/{id}")
     public ResponseEntity<StandardResult<BookingRequestDTO>> updateByRequester(@PathVariable int id, @RequestBody BookingRequestUpdateDTO dto,
-                                                                               @AuthenticationPrincipal User user) {
+                                                                               @AuthenticationPrincipal User user) throws ResernurException {
         if (dto.getId() != id) dto.setId(id);
         var res = bookingRequestService.updateByRequester(id, dto, user.getId().intValue());
         if (!res.isSuccess()) {
