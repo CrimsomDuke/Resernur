@@ -151,6 +151,9 @@
                     <excludes>
                         <exclude>com/resernur/api/configurations/**</exclude>
                         <exclude>com/resernur/api/models/**</exclude>
+                        <exclude>com/resernur/api/handlers/**</exclude>
+                        <exclude>com/resernur/api/utils/aspect/**</exclude>
+                        <exclude>com/resernur/api/utils/executions/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>

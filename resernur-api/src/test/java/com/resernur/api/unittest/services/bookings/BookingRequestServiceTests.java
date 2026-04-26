@@ -35,6 +35,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -114,7 +115,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void createBookingRequest_Success() throws ResernurException {
+    public void createBookingRequest_Success() throws ResernurException, IOException {
         // arrange
         BookingRequestCreateDTO dto = new BookingRequestCreateDTO();
         dto.setUserId(user.getId().intValue());

@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
 @RestController
 @RequestMapping("/api/booking-requests")
 public class BookingRequestController {
@@ -27,7 +29,7 @@ public class BookingRequestController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StandardResult<BookingRequestDTO>> create(@ModelAttribute BookingRequestCreateDTO dto,
-                                                                    @AuthenticationPrincipal User user) throws ResernurException {
+                                                                    @AuthenticationPrincipal User user) throws ResernurException, IOException {
         var res = bookingRequestService.createBookingRequest(dto, user.getId().intValue());
         if (!res.isSuccess()) return ResponseEntity.badRequest().body(res);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);

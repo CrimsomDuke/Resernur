@@ -29,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -67,7 +68,7 @@ public class BookingRequestService {
 
     // Create booking request with overlap validation
     @Transactional
-    public StandardResult<BookingRequestDTO> createBookingRequest(BookingRequestCreateDTO dto, int userId) throws ResernurException {
+    public StandardResult<BookingRequestDTO> createBookingRequest(BookingRequestCreateDTO dto, int userId) throws ResernurException, IOException {
         // Validar datos de entrada
         if (dto.containsMissingFields()) {
             throw new ResernurException("Faltan campos requeridos ");
@@ -93,11 +94,7 @@ public class BookingRequestService {
         //handle file oh yeah
         if(dto.getAttachmentFile() != null){
             StandardResult<File> fileResult;
-            try{
-                fileResult = fileService.saveFile(dto.getAttachmentFile());
-            }catch (Exception ex){
-                return new StandardResult<>(false, "Failed to save attachment file: " + ex.getMessage(), null);
-            }
+            fileResult = fileService.saveFile(dto.getAttachmentFile());
 
             if (!fileResult.isSuccess()) {
                 return new StandardResult<>(false, "Failed to save attachment file: " + fileResult.getErrorMessage(), null);
@@ -175,7 +172,6 @@ public class BookingRequestService {
         return new StandardResult<>(true, "", toDTO(saved));
     }
 
-    // Delete request (owner can delete)
     @Transactional
     public StandardResult<Void> deleteRequest(int id, int requesterId) {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(id);
@@ -188,13 +184,11 @@ public class BookingRequestService {
         return new StandardResult<>(true, "", null);
     }
 
-    // Backward-compatible alias: controller calls `delete(id, requesterId)`
     @Transactional
     public StandardResult<Void> delete(int id, int requesterId) {
         return deleteRequest(id, requesterId);
     }
 
-    // Accept a booking request: mark accepted, create Booking reject overlapping requests and notify
     @Transactional
     public StandardResult<BookingRequestDTO> acceptRequest(int requestId, int userId) {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
@@ -206,7 +200,6 @@ public class BookingRequestService {
         req.setStatus(BookingRequestStatus.ACCEPTED);
         bookingRequestRepository.save(req);
 
-        // Find overlapping requests and mark them as REJECTED, notify users (TODO NotificationService)
         List<BookingRequestStatus> checkStatuses = List.of(BookingRequestStatus.PENDING, BookingRequestStatus.CHANGES_REQUESTED);
         var overlaps = bookingRequestRepository.findByPlace_IdAndStatusInAndRequestedStartTimeLessThanEqualAndRequestedEndTimeGreaterThanEqual(
                 req.getPlace().getId(), checkStatuses, req.getRequestedEndTime(), req.getRequestedStartTime()
@@ -233,7 +226,6 @@ public class BookingRequestService {
         return new StandardResult<>(true, "", toDTO(req));
     }
 
-    // Reject a booking request with a reason
     @Transactional
     public StandardResult<BookingRequestDTO> rejectRequest(int requestId, String reason, int userId) {
         if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Se necesita razon de rechazo", null);
@@ -252,7 +244,6 @@ public class BookingRequestService {
         return new StandardResult<>(true, "", toDTO(req));
     }
 
-    // Request changes for a booking request
     @Transactional
     public StandardResult<BookingRequestDTO> requestChanges(int requestId, String reason, int userId) {
         if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Se requiere una razon", null);
