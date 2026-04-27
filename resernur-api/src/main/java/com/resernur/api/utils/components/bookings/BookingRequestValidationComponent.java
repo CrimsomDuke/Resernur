@@ -23,10 +23,6 @@ public class BookingRequestValidationComponent {
 
     private final DateUtils dateUtils = new DateUtils();
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/slave
     public CustomError validateUserAndPlaceExistance(Optional<User> userOpt, Optional<Place> placeOpt) {
         if (userOpt.isEmpty()) {
             return new CustomError("Usuario no encontrado");
