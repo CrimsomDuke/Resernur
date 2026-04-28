@@ -1,10 +1,12 @@
 package com.resernur.api.services.security;
 
+import com.resernur.api.models.enums.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +34,10 @@ public class JwtService {
         Map<String, Object> extraClaims = new HashMap<>();
 
         // Grab the first authority string (e.g., "ROLE_ADMINISTRADOR")
-        String roleName = userDetails.getAuthorities().iterator().next().getAuthority();
+        String roleName = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst()
+                        .orElse(UserRole.SOLICITANTE.name());
         extraClaims.put("role", roleName);
 
         return buildToken(extraClaims, userDetails, jwtExpiration);
@@ -75,6 +80,7 @@ public class JwtService {
                 .parseSignedClaims(token)
                 .getPayload();
     }
+
 
     private SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
