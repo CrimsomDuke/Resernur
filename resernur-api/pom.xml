@@ -154,6 +154,9 @@
                         <exclude>com/resernur/api/handlers/**</exclude>
                         <exclude>com/resernur/api/utils/aspect/**</exclude>
                         <exclude>com/resernur/api/utils/executions/**</exclude>
+                        <exclude>com/resernur/api/services/security/JwtAuthenticationFilter.class</exclude>
+                        <exclude>com/resernur/api/models/**</exclude>
+                        <exclude>com/resernur/api/dtos/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>

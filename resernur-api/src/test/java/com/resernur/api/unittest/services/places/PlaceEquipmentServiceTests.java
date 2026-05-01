@@ -89,6 +89,19 @@ public class PlaceEquipmentServiceTests {
     }
 
     @Test
+    public void changeState_NotFound(){
+        //arrange
+        when(placeEquimentRepository.findById(any(Integer.class))).thenReturn(null);
+
+        //act
+        StandardResult<PlaceEquipmentResponseDTO> result = placeEquipmentService.changeState(equipment.getId(), "UNAVAILABLE");
+
+        //assrt
+        assertNull(result.getData());
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
     public void moveEquipment_Success() {
         Place newPlace = new Place();
         newPlace.setId(2);
