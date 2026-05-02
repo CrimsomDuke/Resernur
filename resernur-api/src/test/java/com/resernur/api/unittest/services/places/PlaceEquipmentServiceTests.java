@@ -91,8 +91,8 @@ public class PlaceEquipmentServiceTests {
     @Test
     public void changeState_NotFound(){
         //arrange
-        when(placeEquimentRepository.findById(any(Integer.class))).thenReturn(null);
-
+        when(placeEquimentRepository.findById(any(Integer.class)))
+                .thenReturn(Optional.empty());
         //act
         StandardResult<PlaceEquipmentResponseDTO> result = placeEquipmentService.changeState(equipment.getId(), "UNAVAILABLE");
 
@@ -106,11 +106,11 @@ public class PlaceEquipmentServiceTests {
         Place newPlace = new Place();
         newPlace.setId(2);
         newPlace.setName("Laboratorio");
-        when(placeEquimentRepository.findById(eq(equipment.getId()))).thenReturn(Optional.of(equipment));
+        when(placeEquimentRepository.findById(eq(10))).thenReturn(Optional.of(equipment));
         when(placeRepository.findById(eq(newPlace.getId()))).thenReturn(Optional.of(newPlace));
         when(placeEquimentRepository.save(any(PlaceEquipment.class))).thenReturn(equipment);
 
-        StandardResult<PlaceEquipmentResponseDTO> result = placeEquipmentService.moveEquipment(equipment.getId(), newPlace.getId());
+        StandardResult<PlaceEquipmentResponseDTO> result = placeEquipmentService.moveEquipment(10, newPlace.getId());
 
         assertTrue(result.isSuccess());
         assertNotNull(result.getData());
@@ -118,6 +118,29 @@ public class PlaceEquipmentServiceTests {
         verify(placeEquimentRepository, times(1)).findById(eq(equipment.getId()));
         verify(placeRepository, times(1)).findById(eq(newPlace.getId()));
         verify(placeEquimentRepository, times(1)).save(any(PlaceEquipment.class));
+    }
+
+    @Test
+    public void moveEquipment_EquipmentNotFound(){
+        when(placeEquimentRepository.findById(eq(equipment.getId()))).thenReturn(Optional.empty());
+
+        StandardResult<PlaceEquipmentResponseDTO> result =  placeEquipmentService.moveEquipment(equipment.getId(), equipment.getId());
+        assertFalse(result.isSuccess());
+        assertNull(result.getData());
+        verify(placeEquimentRepository, times(1)).findById(eq(equipment.getId()));
+    }
+
+    @Test
+    public void moveEquipment_PlaceNotFound(){
+        when(placeEquimentRepository.findById(eq(equipment.getId()))).thenReturn(Optional.of(equipment));
+        when(placeRepository.findById(any(Integer.class))).thenReturn(Optional.empty());
+
+        StandardResult<PlaceEquipmentResponseDTO> result =  placeEquipmentService.moveEquipment(equipment.getId(), 0);
+
+        assertFalse(result.isSuccess());
+        assertNull(result.getData());
+        verify(placeEquimentRepository, times(1)).findById(eq(equipment.getId()));
+        verify(placeRepository, times(1)).findById(any(Integer.class));
     }
 
     @Test
@@ -167,6 +190,7 @@ public class PlaceEquipmentServiceTests {
         verify(placeEquimentRepository, times(1)).save(any(PlaceEquipment.class));
     }
 
+
     @Test
     public void deleteEquipment_Success() {
         when(placeEquimentRepository.existsById(eq(equipment.getId()))).thenReturn(true);
@@ -177,5 +201,15 @@ public class PlaceEquipmentServiceTests {
         assertTrue(result.isSuccess());
         verify(placeEquimentRepository, times(1)).existsById(eq(equipment.getId()));
         verify(placeEquimentRepository, times(1)).deleteById(eq(equipment.getId()));
+    }
+
+    @Test
+    public void deleteEquipment_NotFound() {
+        when(placeEquimentRepository.existsById(any(Integer.class))).thenReturn(false);
+
+        StandardResult<Void> result = placeEquipmentService.deleteEquipment(999);
+        assertFalse(result.isSuccess());
+        assertNull(result.getData());
+        verify(placeEquimentRepository, times(1)).existsById(any(Integer.class));
     }
 }
