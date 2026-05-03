@@ -116,4 +116,72 @@ public class PlaceEquipmentControllerTests {
         assertNotNull(response);
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     }
+
+    @Test
+    public void createEquipment_Failure() {
+        PlaceEquipmentCreateDTO createDTO = new PlaceEquipmentCreateDTO();
+        createDTO.setPlaceId(2);
+        StandardResult<PlaceEquipmentResponseDTO> result = new StandardResult<>(false, "error", null);
+        when(equipmentService.createEquipment(any(PlaceEquipmentCreateDTO.class))).thenReturn(result);
+        var response = controller.createEquipment(2, createDTO);
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
+    }
+
+    @Test
+    public void updateEquipment_Failure() {
+        PlaceEquipmentUpdateDTO updateDTO = new PlaceEquipmentUpdateDTO();
+        StandardResult<PlaceEquipmentResponseDTO> result = new StandardResult<>(false, "error", null);
+        when(equipmentService.updateEquipment(eq(1), any(PlaceEquipmentUpdateDTO.class))).thenReturn(result);
+        var response = controller.updateEquipment(1, updateDTO);
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
+    }
+
+    @Test
+    public void changeState_Failure() {
+        ModifyStatusPlaceEquipmentDTO statusDTO = new ModifyStatusPlaceEquipmentDTO();
+        statusDTO.setStatus(PlaceEquipmentStatus.AVAILABLE);
+        StandardResult<PlaceEquipmentResponseDTO> result = new StandardResult<>(false, "error", null);
+        when(equipmentService.changeState(eq(1), anyString())).thenReturn(result);
+        var response = controller.changeState(1, statusDTO);
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
+    }
+
+    @Test
+    public void moveEquipment_Failure() {
+        MovePlaceEquipmentDTO moveDTO = new MovePlaceEquipmentDTO();
+        moveDTO.setNewPlaceId(3);
+        StandardResult<PlaceEquipmentResponseDTO> result = new StandardResult<>(false, "error", null);
+        when(equipmentService.moveEquipment(eq(1), eq(3))).thenReturn(result);
+        var response = controller.moveEquipment(1, moveDTO);
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
+    }
+
+    @Test
+    public void modifyQuantity_Failure() {
+        ModifyQuantityPlaceEquipmentDTO qtyDTO = new ModifyQuantityPlaceEquipmentDTO();
+        qtyDTO.setQuantity(5);
+        StandardResult<PlaceEquipmentResponseDTO> result = new StandardResult<>(false, "error", null);
+        when(equipmentService.modifyQuantity(eq(1), eq(5))).thenReturn(result);
+        var response = controller.modifyQuantity(1, qtyDTO);
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
+    }
+
+    @Test
+    public void deleteEquipment_Failure() {
+        StandardResult<Void> result = new StandardResult<>(false, "error", null);
+        when(equipmentService.deleteEquipment(1)).thenReturn(result);
+        var response = controller.deleteEquipment(1);
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
 }

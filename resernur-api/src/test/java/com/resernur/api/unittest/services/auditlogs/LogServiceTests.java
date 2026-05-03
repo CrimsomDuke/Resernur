@@ -13,6 +13,7 @@ import org.mockito.internal.verification.Times;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,8 +43,76 @@ public class LogServiceTests {
         logService.logAction(action, desc, executorId, entityName, entityId);
 
         //assert
-        Mockito.verify(auditLogRepository, Mockito.times(1)).save(any(AuditLog.class));
+        Mockito.verify(auditLogRepository, times(1)).save(any(AuditLog.class));
 
+    }
+
+    @Test
+    public void logAction_NullAction_DoesNothing() {
+        logService.logAction(null, "desc", 1, "ENTITY", 1);
+        Mockito.verify(auditLogRepository, times(1)).save(any(AuditLog.class));
+    }
+
+    @Test
+    public void logAction_NullEntityName_DoesNothing() {
+        logService.logAction(Actions.CREATE, "desc", 1, null, 1);
+        Mockito.verify(auditLogRepository, times(1)).save(any(AuditLog.class));
+    }
+
+    @Test
+    public void logAction_NullDescription_DoesNothing() {
+        logService.logAction(Actions.CREATE, null, 1, "ENTITY", 1);
+        Mockito.verify(auditLogRepository, times(1)).save(any(AuditLog.class));
+    }
+
+    @Test
+    public void logAction_NullExecutorId_DoesNothing() {
+        logService.logAction(Actions.CREATE, "desc", 0, "ENTITY", 1);
+        Mockito.verify(auditLogRepository, times(1)).save(any(AuditLog.class));
+    }
+
+    @Test
+    public void logAction_NullEntityId_DoesNothing() {
+        logService.logAction(Actions.CREATE, "desc", 1, "ENTITY", 0);
+        Mockito.verify(auditLogRepository, times(1)).save(any(AuditLog.class));
+    }
+
+    @Test
+    public void logAction_WithNoDescription_Success() {
+        //arrange
+        Actions action = Actions.UPDATE;
+        int executorId = 20;
+        String entityName = "USERS";
+        int entityId = 2;
+
+        when(auditLogRepository.save(any(AuditLog.class)))
+                .thenReturn(any(AuditLog.class));
+
+        //act
+        logService.logAction(action, executorId, entityName, entityId);
+
+        //assert
+        Mockito.verify(auditLogRepository, times(1)).save(any(AuditLog.class));
+    }
+
+    @Test
+    public void searchLogs_Success() {
+        //arrange
+        Integer executorId = 10;
+        String entityName = "BOOKINGS";
+        Integer entityId = 1;
+        Actions action = Actions.READ;
+        int page = 0;
+        int pageSize = 10;
+
+        when(auditLogRepository.findForSearch(executorId, entityName, entityId, action, org.springframework.data.domain.PageRequest.of(page, pageSize)))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        //act
+        logService.searchLogs(executorId, entityName, entityId, action, page, pageSize);
+
+        //assert
+        Mockito.verify(auditLogRepository, times(1)).findForSearch(executorId, entityName, entityId, action, org.springframework.data.domain.PageRequest.of(page, pageSize));
     }
 
 }
