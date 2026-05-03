@@ -34,15 +34,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 // ...existing code...
 import static org.mockito.ArgumentMatchers.anyString;
@@ -197,6 +196,21 @@ public class BookingRequestServiceTests {
         assertTrue(result.isSuccess());
         assertEquals(1, result.getContent().size());
         verify(bookingRequestRepository, times(1)).findByStatus(eq(BookingRequestStatus.PENDING), any(Pageable.class));
+    }
+
+    @Test
+    public void getAllPaged_NoStatus(){
+        SearchQuery query = new SearchQuery("", 0, 5);
+        Pageable pageable = PageRequest.of(0, 5);
+        PageImpl<BookingRequest> page = new PageImpl<>(List.of(bookingRequest), pageable, 1);
+
+        when(bookingRequestRepository.findAll(pageable))
+                .thenReturn(page);
+
+        PagedResponse<BookingRequestDTO> result = bookingRequestService.getAllPaged(query, null);
+        assertNotNull(result);
+        assertTrue(result.isSuccess());
+        verify(bookingRequestRepository, times(1)).findAll(pageable);
     }
 
     @Test
