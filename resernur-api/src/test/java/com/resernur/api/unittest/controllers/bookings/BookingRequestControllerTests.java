@@ -115,6 +115,17 @@ public class BookingRequestControllerTests {
     }
 
     @Test
+    public void testGetById_NotFound() {
+        StandardResult<BookingRequestDTO> notFound = new StandardResult<>(false, "not found", null);
+        when(bookingRequestService.getById(99)).thenReturn(notFound);
+        var response = bookingRequestController.getById(99);
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
+        assertNull(response.getBody().getData());
+    }
+
+    @Test
     public void testAccept_Success(){
 
         //Arrange
@@ -141,6 +152,17 @@ public class BookingRequestControllerTests {
         assertEquals(requestId, response.getBody().getData().getId());
         Mockito.verify(bookingRequestService, Mockito.times(1)).acceptRequest(requestId, Math.toIntExact(testUser.getId()));
 
+    }
+
+    @Test
+    public void testAccept_NotFound() {
+        int requestId = 99;
+        StandardResult<BookingRequestDTO> notFound = new StandardResult<>(false, "not found", null);
+        when(bookingRequestService.acceptRequest(requestId, Math.toIntExact(testUser.getId()))).thenReturn(notFound);
+        var response = bookingRequestController.accept(requestId, testUser);
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
     }
 
     @Test
@@ -185,6 +207,19 @@ public class BookingRequestControllerTests {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().isSuccess());
         assertEquals(requestId, response.getBody().getData().getId());
+    }
+
+    @Test
+    public void testRequestChanges_NotFound() {
+        int requestId = 99;
+        BookingRequestController.ReasonBody body = new BookingRequestController.ReasonBody();
+        body.reason = "Falta información";
+        StandardResult<BookingRequestDTO> notFound = new StandardResult<>(false, "not found", null);
+        when(bookingRequestService.requestChanges(eq(requestId), eq(body.reason), anyInt())).thenReturn(notFound);
+        var response = bookingRequestController.requestChanges(requestId, body, testUser);
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
     }
 
     @Test
