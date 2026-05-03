@@ -65,12 +65,14 @@ public class BookingRequestValidationComponentTests {
 
     @Test
     public void validateBookingTimes_success() {
-        LocalDateTime now = LocalDateTime.now().plusDays(2);
+        // La reserva debe ser al menos 1 día después de hoy y no exceder 8 horas
+        LocalDateTime start = LocalDateTime.now().plusDays(2).withHour(10).withMinute(0);
+        LocalDateTime end = start.plusHours(3); // 3 horas de diferencia
         when(configProvider.getInt("MAX_RESERVATION_HOURS")).thenReturn(8);
         when(configProvider.getInt("MIN_ADVANCE_DAYS")).thenReturn(1);
         when(configProvider.getString("OPENING_TIME")).thenReturn("08:00");
         when(configProvider.getString("CLOSING_TIME")).thenReturn("22:00");
-        assertDoesNotThrow(() -> validator.validateBookingTimes(LocalDateTime.now(), now, now.plusHours(2), configProvider));
+        assertDoesNotThrow(() -> validator.validateBookingTimes(LocalDateTime.now(), start, end, configProvider));
     }
 
     @Test
