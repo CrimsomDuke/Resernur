@@ -4,6 +4,7 @@ import com.resernur.api.dtos.bookings.BookingDTO;
 import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
+import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.dtos.pojos.CustomError;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
@@ -28,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -66,33 +68,20 @@ public class BookingRequestService {
 
     // Create booking request with overlap validation
     @Transactional
-    public StandardResult<BookingRequestDTO> createBookingRequest(BookingRequestCreateDTO dto, int userId) {
+    public StandardResult<BookingRequestDTO> createBookingRequest(BookingRequestCreateDTO dto, int userId) throws ResernurException, IOException {
         // Validar datos de entrada
         if (dto.containsMissingFields()) {
-            return new StandardResult<>(false, "Missing required fields", null);
+            throw new ResernurException("Faltan campos requeridos ");
         }
 
         // Validar usuario
         var userOpt = userRepository.findById((long) dto.getUserId());
         var placeOpt = placeRepository.findById(dto.getPlaceId());
-
-        CustomError customError = validationComponent.validateUserAndPlaceExistance(userOpt, placeOpt);
-        if(customError != null){
-            return new StandardResult<>(false, customError.getMessage(), null);
-        }
-
+        validationComponent.validateUserAndPlaceExistance(userOpt, placeOpt);
         // Validar fechas
-        customError = validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
-        if(customError != null){
-            return new StandardResult<>(false, customError.getMessage(), null);
-        }
-
+        validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
         // Validar solapamientos: no debe haber otras requests en ESE periodo para el mismo lugar
-        customError = validationComponent.validateOverlappingOnCreate(dto, bookingRequestRepository);
-        if(customError != null){
-            return new StandardResult<>(false, customError.getMessage(), null);
-        }
-
+        validationComponent.validateOverlappingOnCreate(dto, bookingRequestRepository);
         // Crear entidad y guardar
         BookingRequest bookingRequest = new BookingRequest();
         bookingRequest.setUser(userOpt.get());
@@ -105,11 +94,7 @@ public class BookingRequestService {
         //handle file oh yeah
         if(dto.getAttachmentFile() != null){
             StandardResult<File> fileResult;
-            try{
-                fileResult = fileService.saveFile(dto.getAttachmentFile());
-            }catch (Exception ex){
-                return new StandardResult<>(false, "Failed to save attachment file: " + ex.getMessage(), null);
-            }
+            fileResult = fileService.saveFile(dto.getAttachmentFile());
 
             if (!fileResult.isSuccess()) {
                 return new StandardResult<>(false, "Failed to save attachment file: " + fileResult.getErrorMessage(), null);
@@ -160,29 +145,18 @@ public class BookingRequestService {
 
     // Update by requester: can change time interval and reason
     @Transactional
-    public StandardResult<BookingRequestDTO> updateByRequester(int id, BookingRequestUpdateDTO dto, int userId) {
+    public StandardResult<BookingRequestDTO> updateByRequester(int id, BookingRequestUpdateDTO dto, int userId) throws ResernurException {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(id);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
 
-        CustomError customError = validationComponent.validateUpdateRequestFields(dto, req);
-        if(customError != null){
-            return new StandardResult<>(false, customError.getMessage(), null);
-        }
+        validationComponent.validateUpdateRequestFields(dto, req);
 
         // Validate dates if provided
         if (dto.getRequestedStartTime() != null && dto.getRequestedEndTime() != null) {
-            customError = validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
-            if(customError != null) {
-                return new StandardResult<>(false, customError.getMessage(), null);
-            }
+            validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
 
-            // Check overlaps with accepted bookings
-            customError = validationComponent.validateOverlappingOnUpdate(dto, req, bookingRequestRepository);
-            if(customError != null){
-                return new StandardResult<>(false, customError.getMessage(), null);
-            }
-
+            validationComponent.validateOverlappingOnUpdate(dto, req, bookingRequestRepository);
             req.setRequestedStartTime(dto.getRequestedStartTime());
             req.setRequestedEndTime(dto.getRequestedEndTime());
         }
@@ -198,7 +172,6 @@ public class BookingRequestService {
         return new StandardResult<>(true, "", toDTO(saved));
     }
 
-    // Delete request (owner can delete)
     @Transactional
     public StandardResult<Void> deleteRequest(int id, int requesterId) {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(id);
@@ -211,13 +184,11 @@ public class BookingRequestService {
         return new StandardResult<>(true, "", null);
     }
 
-    // Backward-compatible alias: controller calls `delete(id, requesterId)`
     @Transactional
     public StandardResult<Void> delete(int id, int requesterId) {
         return deleteRequest(id, requesterId);
     }
 
-    // Accept a booking request: mark accepted, create Booking reject overlapping requests and notify
     @Transactional
     public StandardResult<BookingRequestDTO> acceptRequest(int requestId, int userId) {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
@@ -229,7 +200,6 @@ public class BookingRequestService {
         req.setStatus(BookingRequestStatus.ACCEPTED);
         bookingRequestRepository.save(req);
 
-        // Find overlapping requests and mark them as REJECTED, notify users (TODO NotificationService)
         List<BookingRequestStatus> checkStatuses = List.of(BookingRequestStatus.PENDING, BookingRequestStatus.CHANGES_REQUESTED);
         var overlaps = bookingRequestRepository.findByPlace_IdAndStatusInAndRequestedStartTimeLessThanEqualAndRequestedEndTimeGreaterThanEqual(
                 req.getPlace().getId(), checkStatuses, req.getRequestedEndTime(), req.getRequestedStartTime()
@@ -256,7 +226,6 @@ public class BookingRequestService {
         return new StandardResult<>(true, "", toDTO(req));
     }
 
-    // Reject a booking request with a reason
     @Transactional
     public StandardResult<BookingRequestDTO> rejectRequest(int requestId, String reason, int userId) {
         if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Se necesita razon de rechazo", null);
@@ -275,7 +244,6 @@ public class BookingRequestService {
         return new StandardResult<>(true, "", toDTO(req));
     }
 
-    // Request changes for a booking request
     @Transactional
     public StandardResult<BookingRequestDTO> requestChanges(int requestId, String reason, int userId) {
         if (reason == null || reason.isBlank()) return new StandardResult<>(false, "Se requiere una razon", null);

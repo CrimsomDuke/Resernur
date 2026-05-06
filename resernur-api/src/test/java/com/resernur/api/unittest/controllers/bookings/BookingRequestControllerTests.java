@@ -5,6 +5,7 @@ import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestDTO;
 import com.resernur.api.dtos.bookings.BookingRequestReasonBodyDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
+import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.enums.ActivityType;
@@ -20,6 +21,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,7 +51,7 @@ public class BookingRequestControllerTests {
     }
 
     @Test
-    public void create_WhenServiceReturnsSuccess_ShouldReturnCreated() {
+    public void create_WhenServiceReturnsSuccess_ShouldReturnCreated() throws ResernurException, IOException {
         BookingRequestCreateDTO dto = new BookingRequestCreateDTO();
         dto.setUserId(1);
         dto.setPlaceId(2);
@@ -77,7 +79,7 @@ public class BookingRequestControllerTests {
     }
 
     @Test
-    public void create_WhenServiceReturnsFailure_ShouldReturnBadRequest() {
+    public void create_WhenServiceReturnsFailure_ShouldReturnBadRequest() throws ResernurException, IOException {
         BookingRequestCreateDTO dto = new BookingRequestCreateDTO();
         dto.setUserId(1);
         dto.setPlaceId(2);
@@ -113,6 +115,17 @@ public class BookingRequestControllerTests {
     }
 
     @Test
+    public void testGetById_NotFound() {
+        StandardResult<BookingRequestDTO> notFound = new StandardResult<>(false, "not found", null);
+        when(bookingRequestService.getById(99)).thenReturn(notFound);
+        var response = bookingRequestController.getById(99);
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
+        assertNull(response.getBody().getData());
+    }
+
+    @Test
     public void testAccept_Success(){
 
         //Arrange
@@ -139,6 +152,17 @@ public class BookingRequestControllerTests {
         assertEquals(requestId, response.getBody().getData().getId());
         Mockito.verify(bookingRequestService, Mockito.times(1)).acceptRequest(requestId, Math.toIntExact(testUser.getId()));
 
+    }
+
+    @Test
+    public void testAccept_NotFound() {
+        int requestId = 99;
+        StandardResult<BookingRequestDTO> notFound = new StandardResult<>(false, "not found", null);
+        when(bookingRequestService.acceptRequest(requestId, Math.toIntExact(testUser.getId()))).thenReturn(notFound);
+        var response = bookingRequestController.accept(requestId, testUser);
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
     }
 
     @Test
@@ -186,7 +210,20 @@ public class BookingRequestControllerTests {
     }
 
     @Test
-    public void testUpdateByRequester_Success() {
+    public void testRequestChanges_NotFound() {
+        int requestId = 99;
+        BookingRequestController.ReasonBody body = new BookingRequestController.ReasonBody();
+        body.reason = "Falta información";
+        StandardResult<BookingRequestDTO> notFound = new StandardResult<>(false, "not found", null);
+        when(bookingRequestService.requestChanges(eq(requestId), eq(body.reason), anyInt())).thenReturn(notFound);
+        var response = bookingRequestController.requestChanges(requestId, body, testUser);
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
+    }
+
+    @Test
+    public void testUpdateByRequester_Success() throws ResernurException {
         int requestId = 12;
         BookingRequestDTO returned = new BookingRequestDTO();
         returned.setId(requestId);
@@ -202,7 +239,7 @@ public class BookingRequestControllerTests {
     }
 
     @Test
-    public void testUpdateByRequester_NotFound() {
+    public void testUpdateByRequester_NotFound() throws ResernurException {
         int requestId = 12;
         BookingRequestUpdateDTO updateDTO = new BookingRequestUpdateDTO();
         updateDTO.setId(requestId);

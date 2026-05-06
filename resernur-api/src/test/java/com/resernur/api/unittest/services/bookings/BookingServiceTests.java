@@ -96,12 +96,14 @@ public class BookingServiceTests {
         SearchQuery query = new SearchQuery("", 0, 5);
         Pageable pageable = PageRequest.of(0, 5);
         PageImpl<Booking> page = new PageImpl<>(List.of(booking), pageable, 1);
-        when(bookingRepository.findAll(any(Pageable.class))).thenReturn(page);
+        when(bookingRepository.findByDynamicFilters(any(), any(), anyBoolean(), any(), any(Pageable.class)))
+                .thenReturn(page);
+
         PagedResponse<BookingDTO> result = bookingService.search(query, null, null, false);
         assertNotNull(result);
         assertTrue(result.isSuccess());
         assertEquals(1, result.getContent().size());
-        verify(bookingRepository, times(1)).findAll(any(Pageable.class));
+        verify(bookingRepository, times(1)).findByDynamicFilters(any(), any(), anyBoolean(), any(), any(Pageable.class));
     }
 
     @Test

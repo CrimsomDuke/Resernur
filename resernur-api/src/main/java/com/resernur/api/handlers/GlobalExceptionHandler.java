@@ -1,5 +1,7 @@
 package com.resernur.api.handlers;
 
+import com.resernur.api.dtos.exceptions.ResernurException;
+import com.resernur.api.dtos.pojos.StandardResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -29,5 +31,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(ResernurException.class)
+    public ResponseEntity<StandardResult<Boolean>> handleResernurException(ResernurException e){
+        StandardResult<Boolean> result = new StandardResult<>();
+        result.setErrorMessage(e.getErrorMessage());
+        result.setSuccess(false);
+        result.setData(null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(result);
     }
 }

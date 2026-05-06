@@ -5,6 +5,7 @@ import AdminDashboardView from './views/AdminDashboardView';
 import AdminCreateSpaceView from './views/AdminCreateSpaceView';
 import AdminRequestsView from './views/AdminRequestsView';
 import AdminBookingsView from './views/AdminBookingsView';
+import AdminAnalyticsView from './views/AdminAnalyticsView';
 
 const MENU_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -49,6 +50,10 @@ export default function AdminPanel({ editingSpace = null, onEditHandled }) {
           onCancelEdit={onEditHandled}
         />
       );
+    }
+
+    if (activeSection === 'analytics') {
+      return <AdminAnalyticsView />;
     }
 
     return (

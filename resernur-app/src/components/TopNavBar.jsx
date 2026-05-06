@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import logoNur from '../assets/nur.png';
-import {
-  getLocalNotifications,
-  getUnreadLocalNotificationsCount,
-  markAllLocalNotificationsAsRead,
-  subscribeToLocalNotificationChanges
-} from '../utils/notificationCenter';
+const API = 'http://localhost:5000';
+
+function authHeaders() {
+  const token = localStorage.getItem('resernur_token');
+  return token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+}
 
 export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin = false }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -13,17 +15,33 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
   const notificationPanelRef = useRef(null);
 
   const unreadCount = useMemo(() => {
-    return getUnreadLocalNotificationsCount(isAdmin);
-  }, [notifications, isAdmin]);
+    return notifications.filter(n => !n.isRead).length;
+  }, [notifications]);
 
   useEffect(() => {
-    const refresh = () => {
-      setNotifications(getLocalNotifications(isAdmin));
+    const fetchNotifications = async () => {
+      try {
+        const userStr = localStorage.getItem('resernur_user');
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        if (!user || !user.id) return;
+
+        const res = await fetch(`${API}/api/notifications/user/${user.id}?pageSize=50`, {
+          headers: authHeaders(),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // The backend returns a PagedResponse, we want its content
+          setNotifications(data.content || []);
+        }
+      } catch (err) {
+        // Silently ignore polling errors
+      }
     };
 
-    refresh();
-    const unsubscribe = subscribeToLocalNotificationChanges(refresh);
-    return unsubscribe;
+    fetchNotifications();
+    const intervalId = setInterval(fetchNotifications, 10000);
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -38,11 +56,25 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleToggleNotifications = () => {
+  const handleToggleNotifications = async () => {
     const nextOpen = !isNotificationsOpen;
     setIsNotificationsOpen(nextOpen);
-    if (nextOpen) {
-      markAllLocalNotificationsAsRead(isAdmin);
+    if (nextOpen && unreadCount > 0) {
+      try {
+        const userStr = localStorage.getItem('resernur_user');
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        
+        // This endpoint marks unread as read in the backend
+        await fetch(`${API}/api/notifications/user/${user.id}/unread`, {
+          headers: authHeaders(),
+        });
+        
+        // Optimistically update local state
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      } catch (err) {
+        console.error("Error marking notifications as read", err);
+      }
     }
   };
 
@@ -124,8 +156,8 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {notifications.map((notification) => (
-                      <article key={notification.id} className="px-4 py-3 hover:bg-slate-50 transition-colors">
-                        <p className="text-sm text-slate-800">{notification.message}</p>
+                      <article key={notification.id} className="px-4 py-3 hover:bg-slate-50 transition-colors border-l-4" style={{ borderColor: notification.isRead ? 'transparent' : '#dc2626' }}>
+                        <p className={`text-sm text-slate-800 ${!notification.isRead ? 'font-bold' : ''}`}>{notification.message}</p>
                         <p className="text-xs text-slate-500 mt-1">
                           {new Date(notification.createdAt).toLocaleString()}
                         </p>

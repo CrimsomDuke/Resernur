@@ -33,7 +33,6 @@ public class BookingService {
     @Autowired
     private LogService logService;
 
-    // Create a booking from an accepted BookingRequest
     @Transactional
     public StandardResult<BookingDTO> createBookingFromRequest(BookingRequest request) {
         if(request.getStatus() != BookingRequestStatus.ACCEPTED) return new StandardResult<>(false, "BookingRequest must be ACCEPTED to create a Booking", null);
@@ -48,17 +47,16 @@ public class BookingService {
         b.setStatus(BookingStatus.COMPLETED);
 
         Booking saved = bookingRepository.save(b);
+        logService.logAction(Actions.CREATE, request.getUser().getId().intValue(), "BOOKINGS", saved.getId());
         return new StandardResult<>(true, "", toDTO(saved));
     }
 
-    // Get booking by id
     public StandardResult<BookingDTO> getById(int id) {
         Optional<Booking> opt = bookingRepository.findById(id);
         if (opt.isEmpty()) return new StandardResult<>(false, "Not found", null);
         return new StandardResult<>(true, "", toDTO(opt.get()));
     }
 
-    // Search bookings with optional filters: status, user requester id, ongoing flag
     public PagedResponse<BookingDTO> search(SearchQuery query, BookingStatus status, Integer userId, Boolean ongoing) {
         Pageable pageable = PageRequest.of(
                 Math.max(0, query == null ? 0 : query.page),
@@ -67,7 +65,6 @@ public class BookingService {
 
         boolean isOngoing = ongoing != null && ongoing;
 
-        // One simple call, the database handles the "if/else" logic via the WHERE clause
         Page<Booking> pageResult = bookingRepository.findByDynamicFilters(
                 status,
                 userId,
@@ -85,7 +82,6 @@ public class BookingService {
                 pageResult.isLast(), true, "");
     }
 
-    // Cancel a booking
     @Transactional
     public StandardResult<Void> cancelBooking(int id) {
         Optional<Booking> opt = bookingRepository.findById(id);
