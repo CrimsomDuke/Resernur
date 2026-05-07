@@ -20,4 +20,17 @@ public class GlobalExceptionHandler {
         result.setData(null);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<StandardResult<Void>> handleGenericException(Exception e) {
+        StandardResult<Void> result = new StandardResult<>();
+
+        result.setErrorMessage("An unexpected internal error occurred. Please try again later.");
+        result.setSuccess(false);
+        result.setData(null);
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR) // Use 500 for unknown errors
+                .body(result);
+    }
 }
