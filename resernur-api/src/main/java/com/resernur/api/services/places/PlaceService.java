@@ -84,6 +84,16 @@ public class PlaceService {
         return new StandardResult<>(false, "Not found", null);
     }
 
+    public StandardResult<PlaceDTO> changePlaceStatus(int id, PlaceStatus newStatus) {
+        Optional<Place> place = placeRepository.findById(id);
+        if(place.isEmpty()) return new StandardResult<>(false, "Not found", null);
+        Place p = place.get();
+        p.setStatus(newStatus);
+        Place saved = placeRepository.save(p);
+
+        return new StandardResult<>(true, "", toDTO(saved));
+    }
+
     // DTO MAPPING
     private PlaceDTO toDTO(Place place) {
         PlaceDTO dto = new PlaceDTO();
