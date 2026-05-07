@@ -5,6 +5,7 @@ import SpaceExplorer from './features/visual_space_explorer/SpaceExplorer'
 import BookingEngine from './features/space_booking_engine/BookingEngine'
 import AdminPanel from './features/admin/AdminPanel'
 import CalendarView from './features/calendar/CalendarView'
+import UserRequestsView from './features/user_requests/UserRequestsView'
 
 const ADMIN_ROLE = 'ROLE_ADMINISTRADOR';
 
@@ -145,12 +146,8 @@ function App() {
           <CalendarView onGoBack={() => setCurrentView("explorer")} />
         )}
         
-        {currentView === "booking" && (
-          <div style={{ textAlign: 'center', padding: '5rem', color: '#6b7280' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '48px', marginBottom: '1rem' }}>construction</span>
-            <h2>Sección en Construcción</h2>
-            <p>Esta pantalla está siendo diseñada en Figma.</p>
-          </div>
+        {currentView === "my-requests" && (
+          <UserRequestsView onNavigate={handleNavigate} />
         )}
       </main>
     </div>

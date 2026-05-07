@@ -16,7 +16,7 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
   const notificationPanelRef = useRef(null);
 
   const unreadCount = useMemo(() => {
-    return notifications.filter(n => !n.isRead).length;
+    return notifications.filter(n => !(n.read || n.isRead)).length;
   }, [notifications]);
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
         });
         
         // Optimistically update local state
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setNotifications(prev => prev.map(n => ({ ...n, read: true, isRead: true })));
       } catch (err) {
         console.error("Error marking notifications as read", err);
       }
@@ -98,12 +98,7 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
             </span>
           </div>
           <div className="hidden md:flex gap-6">
-            <a 
-              className={`font-medium transition-colors cursor-pointer ${currentView === 'dashboard' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
-              onClick={() => onNavigate("dashboard")}
-            >
-              Dashboard
-            </a>
+
             <a 
               className={`font-medium transition-colors cursor-pointer ${currentView === 'explorer' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
               onClick={() => onNavigate("explorer")}
@@ -111,10 +106,10 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
               Espacios
             </a>
             <a 
-              className={`font-medium transition-colors cursor-pointer ${(currentView === 'bookingEngine' || currentView === 'booking') ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
-              onClick={() => onNavigate("bookingEngine")}
+              className={`font-medium transition-colors cursor-pointer ${currentView === 'my-requests' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
+              onClick={() => onNavigate("my-requests")}
             >
-              Reservas
+              Mis Reservas
             </a>
             <a 
               className={`font-medium transition-colors cursor-pointer ${currentView === 'calendar' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
@@ -167,9 +162,11 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
                         displayMessage = "Tu solicitud ha sido creada y está pendiente de revisión.";
                       }
 
+                      const isReadStatus = notification.read || notification.isRead;
+
                       return (
-                        <article key={notification.id} className="px-4 py-3 hover:bg-slate-50 transition-colors border-l-4" style={{ borderColor: notification.isRead ? 'transparent' : '#dc2626' }}>
-                          <p className={`text-sm text-slate-800 ${!notification.isRead ? 'font-bold' : ''}`}>{displayMessage}</p>
+                        <article key={notification.id} className="px-4 py-3 hover:bg-slate-50 transition-colors border-l-4" style={{ borderColor: isReadStatus ? 'transparent' : '#dc2626' }}>
+                          <p className={`text-sm text-slate-800 ${!isReadStatus ? 'font-bold' : ''}`}>{displayMessage}</p>
                           <p className="text-xs text-slate-500 mt-1">
                             {new Date(notification.createdAt).toLocaleString()}
                           </p>
