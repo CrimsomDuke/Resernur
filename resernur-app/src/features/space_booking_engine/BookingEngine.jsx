@@ -77,7 +77,8 @@ export default function BookingEngine({ spaceToBook, onGoBack }) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data?.errorMessage || `Error ${res.status}: no se pudo crear la solicitud.`);
+        const errorText = data?.errorMessage || data?.error || data?.message || `Error ${res.status}: no se pudo crear la solicitud.`;
+        throw new Error(errorText);
       }
 
       setIsSuccess(true);

@@ -47,7 +47,7 @@ export default function AdminDashboardView({ onNavigate }) {
 
     Promise.all([
       fetchTotalElements(`${API_BASE}/api/users?page=0&pageSize=1`),
-      fetchTotalElements(`${API_BASE}/api/bookings?ongoing=true&page=0&pageSize=1`),
+      fetchTotalElements(`${API_BASE}/api/bookings?status=COMPLETED&page=0&pageSize=1`),
       fetchTotalElements(`${API_BASE}/api/booking-requests?status=PENDING&page=0&pageSize=1`),
     ])
       .then(([users, active, pending]) => {

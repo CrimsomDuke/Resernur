@@ -12,6 +12,7 @@ function authHeaders() {
 export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin = false }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const notificationPanelRef = useRef(null);
 
   const unreadCount = useMemo(() => {
@@ -19,19 +20,28 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
   }, [notifications]);
 
   useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`${API}/api/users/me`, { headers: authHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUser(data.data || data);
+        }
+      } catch (e) {}
+    };
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser || !currentUser.id) return;
+
     const fetchNotifications = async () => {
       try {
-        const userStr = localStorage.getItem('resernur_user');
-        if (!userStr) return;
-        const user = JSON.parse(userStr);
-        if (!user || !user.id) return;
-
-        const res = await fetch(`${API}/api/notifications/user/${user.id}?pageSize=50`, {
+        const res = await fetch(`${API}/api/notifications/user/${currentUser.id}?pageSize=50`, {
           headers: authHeaders(),
         });
         if (res.ok) {
           const data = await res.json();
-          // The backend returns a PagedResponse, we want its content
           setNotifications(data.content || []);
         }
       } catch (err) {
@@ -42,7 +52,7 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
     fetchNotifications();
     const intervalId = setInterval(fetchNotifications, 10000);
     return () => clearInterval(intervalId);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -59,14 +69,10 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
   const handleToggleNotifications = async () => {
     const nextOpen = !isNotificationsOpen;
     setIsNotificationsOpen(nextOpen);
-    if (nextOpen && unreadCount > 0) {
+    if (nextOpen && unreadCount > 0 && currentUser?.id) {
       try {
-        const userStr = localStorage.getItem('resernur_user');
-        if (!userStr) return;
-        const user = JSON.parse(userStr);
-        
         // This endpoint marks unread as read in the backend
-        await fetch(`${API}/api/notifications/user/${user.id}/unread`, {
+        await fetch(`${API}/api/notifications/user/${currentUser.id}/unread`, {
           headers: authHeaders(),
         });
         
@@ -155,14 +161,21 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
-                    {notifications.map((notification) => (
-                      <article key={notification.id} className="px-4 py-3 hover:bg-slate-50 transition-colors border-l-4" style={{ borderColor: notification.isRead ? 'transparent' : '#dc2626' }}>
-                        <p className={`text-sm text-slate-800 ${!notification.isRead ? 'font-bold' : ''}`}>{notification.message}</p>
-                        <p className="text-xs text-slate-500 mt-1">
-                          {new Date(notification.createdAt).toLocaleString()}
-                        </p>
-                      </article>
-                    ))}
+                    {notifications.map((notification) => {
+                      let displayMessage = notification.message;
+                      if (displayMessage === "Your booking request has been created and is pending review") {
+                        displayMessage = "Tu solicitud ha sido creada y está pendiente de revisión.";
+                      }
+
+                      return (
+                        <article key={notification.id} className="px-4 py-3 hover:bg-slate-50 transition-colors border-l-4" style={{ borderColor: notification.isRead ? 'transparent' : '#dc2626' }}>
+                          <p className={`text-sm text-slate-800 ${!notification.isRead ? 'font-bold' : ''}`}>{displayMessage}</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </p>
+                        </article>
+                      );
+                    })}
                   </div>
                 )}
               </div>

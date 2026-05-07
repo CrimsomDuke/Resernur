@@ -18,6 +18,11 @@ function formatDateTime(iso) {
   });
 }
 
+function isPast(iso) {
+  if (!iso) return false;
+  return new Date(iso) < new Date();
+}
+
 function formatDateOnly(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -60,7 +65,9 @@ export default function AdminBookingsView() {
   // Pagination
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 50;
+
+  const [activeTab, setActiveTab] = useState('activas');
 
   const fetchBookings = useCallback(async (p = 0) => {
     setLoading(true);
@@ -151,6 +158,11 @@ export default function AdminBookingsView() {
   const selectedUser = selectedUserId ? userCache[selectedUserId] : null;
   const selectedPlace = selectedBooking ? placeCache[selectedBooking.placeId] : null;
 
+  const filteredBookings = bookings.filter(bk => {
+    const past = isPast(bk.endTime);
+    return activeTab === 'activas' ? !past : past;
+  });
+
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
@@ -173,18 +185,38 @@ export default function AdminBookingsView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-on-surface-variant, #43474f)', marginBottom: '0.25rem' }}>
-            Gestión / Reservas Activas
+            Gestión / Reservas Aprobadas
           </p>
           <h2 style={{ fontFamily: 'var(--font-headline, Manrope, sans-serif)', fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-primary, #001e40)', margin: 0 }}>
-            Reservas Aprobadas
+            Reservas
           </h2>
-          {!loading && (
-            <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem', fontSize: '0.875rem', color: 'var(--color-on-surface-variant, #43474f)', fontWeight: 500 }}>
-              <span className="material-symbols-outlined" style={{ color: '#059669', fontSize: 18 }}>event_available</span>
-              {totalOngoing} reservas activas en curso o próximas
-            </p>
-          )}
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--color-surface-container-high, #e6e8ea)', paddingBottom: '0.5rem' }}>
+        <button
+          onClick={() => setActiveTab('activas')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 1rem', fontSize: '0.875rem', fontWeight: 700,
+            color: activeTab === 'activas' ? 'var(--color-primary, #001e40)' : 'var(--color-on-surface-variant, #43474f)',
+            borderBottom: activeTab === 'activas' ? '2px solid var(--color-primary, #001e40)' : '2px solid transparent',
+            transition: 'all 0.2s'
+          }}
+        >
+          Próximas / En Curso
+        </button>
+        <button
+          onClick={() => setActiveTab('historial')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 1rem', fontSize: '0.875rem', fontWeight: 700,
+            color: activeTab === 'historial' ? 'var(--color-primary, #001e40)' : 'var(--color-on-surface-variant, #43474f)',
+            borderBottom: activeTab === 'historial' ? '2px solid var(--color-primary, #001e40)' : '2px solid transparent',
+            transition: 'all 0.2s'
+          }}
+        >
+          Historial (Finalizadas)
+        </button>
       </div>
 
       {/* Layout */}
@@ -221,10 +253,10 @@ export default function AdminBookingsView() {
 
             {!loading && !error && (
               <div style={{ overflowX: 'auto' }}>
-                {bookings.length === 0 ? (
+                {filteredBookings.length === 0 ? (
                   <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-on-surface-variant, #43474f)' }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 48, marginBottom: '0.5rem', display: 'block' }}>event_busy</span>
-                    No hay reservas activas en este momento.
+                    No se encontraron reservas en esta sección.
                   </div>
                 ) : (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
@@ -238,9 +270,11 @@ export default function AdminBookingsView() {
                       </tr>
                     </thead>
                     <tbody>
-                      {bookings.map((bk) => {
+                      {filteredBookings.map((bk) => {
                         const isSelected = selectedBooking?.id === bk.id;
-                        const st = STATUS_LABELS[bk.status] || STATUS_LABELS.ACTIVE;
+                        const baseSt = STATUS_LABELS[bk.status] || STATUS_LABELS.COMPLETED;
+                        const past = isPast(bk.endTime);
+                        const st = past ? { label: 'Finalizada', color: '#4b5563', bg: '#f3f4f6' } : baseSt;
                         const reqUser = bk.bookingRequest?.userId;
                         
                         // We fetch async, so fallback nicely
@@ -383,16 +417,22 @@ export default function AdminBookingsView() {
                   </div>
                 )}
 
-                <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <button
-                    disabled={actionLoading}
-                    onClick={() => setCancelModal(selectedBooking.id)}
-                    style={{ padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid #fca5a5', cursor: 'pointer', background: '#fee2e2', color: '#dc2626', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: actionLoading ? 0.7 : 1 }}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_busy</span>
-                    Cancelar Reserva
-                  </button>
-                </div>
+                {isPast(selectedBooking.endTime) ? (
+                  <div style={{ marginTop: '2rem', padding: '1rem', background: '#f3f4f6', borderRadius: '0.75rem', textAlign: 'center', color: '#4b5563', fontWeight: 600, fontSize: '0.875rem' }}>
+                    Esta reserva ya ha finalizado y no puede ser cancelada.
+                  </div>
+                ) : (
+                  <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <button
+                      disabled={actionLoading}
+                      onClick={() => setCancelModal(selectedBooking.id)}
+                      style={{ padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid #fca5a5', cursor: 'pointer', background: '#fee2e2', color: '#dc2626', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: actionLoading ? 0.7 : 1 }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>event_busy</span>
+                      Cancelar Reserva
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
