@@ -12,6 +12,7 @@ import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.Actions;
 import com.resernur.api.models.enums.BookingRequestStatus;
+import com.resernur.api.models.enums.UserRole;
 import com.resernur.api.models.files.File;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
 import com.resernur.api.repositories.users.UserRepository;
@@ -104,7 +105,8 @@ public class BookingRequestService {
         }
 
         BookingRequest saved = bookingRequestRepository.save(bookingRequest);
-        notificationService.createNotification((long) dto.getUserId(), "Your booking request has been created and is pending review");
+        notificationService.createNotification((long) dto.getUserId(), "Tu solicitud de reserva fue enviada y esta pendiente de revision");
+        notificationService.createNotificationForUsersInRole(UserRole.ADMINISTRADOR, "Se creo una nueva reserva");
 
         logService.logAction(Actions.CREATE, userId, "BOOKING_REQUEST", saved.getId());
 
