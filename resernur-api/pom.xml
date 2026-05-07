@@ -112,6 +112,9 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+
+
     </dependencies>
 
 	<build>
@@ -140,6 +143,37 @@
 					</excludes>
 				</configuration>
 			</plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.11</version>
+                <configuration> <!-- Configuracion para excluir ciertos paquetes -->
+                    <excludes>
+                        <exclude>com/resernur/api/configurations/**</exclude>
+                        <exclude>com/resernur/api/models/**</exclude>
+                        <exclude>com/resernur/api/handlers/**</exclude>
+                        <exclude>com/resernur/api/utils/aspect/**</exclude>
+                        <exclude>com/resernur/api/utils/executions/**</exclude>
+                        <exclude>com/resernur/api/services/security/JwtAuthenticationFilter.class</exclude>
+                        <exclude>com/resernur/api/models/**</exclude>
+                        <exclude>com/resernur/api/dtos/**</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 		</plugins>
 	</build>
 

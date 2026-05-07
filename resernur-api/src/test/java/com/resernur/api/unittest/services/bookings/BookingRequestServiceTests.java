@@ -4,7 +4,7 @@ import com.resernur.api.dtos.bookings.BookingRequestCreateDTO;
 import com.resernur.api.dtos.bookings.BookingRequestDTO;
 import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
 import com.resernur.api.dtos.bookings.BookingDTO;
-import com.resernur.api.dtos.notifications.NotificationDTO;
+import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
@@ -22,7 +22,7 @@ import com.resernur.api.services.NotificationService;
 import com.resernur.api.services.auditlogs.LogService;
 import com.resernur.api.services.bookings.BookingRequestService;
 import com.resernur.api.services.bookings.BookingService;
-import com.resernur.api.services.files.FileService;
+// ...existing code...
 import com.resernur.api.utils.components.bookings.BookingRequestValidationComponent;
 import com.resernur.api.utils.components.config_parameters.ConfigurationProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,16 +34,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+// ...existing code...
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -66,8 +66,7 @@ public class BookingRequestServiceTests {
     @Mock
     private PlaceRepository placeRepository;
 
-    @Mock
-    private FileService fileService;
+    // ...existing code...
 
     @Mock
     private NotificationService notificationService;
@@ -92,7 +91,7 @@ public class BookingRequestServiceTests {
     private LocalDateTime endTime;
 
     @BeforeEach
-    public void setup(){
+    public void setup() throws ResernurException {
         startTime = LocalDateTime.now().plusDays(1);
         endTime = startTime.plusHours(2);
 
@@ -115,7 +114,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void createBookingRequest_Success(){
+    public void createBookingRequest_Success() throws ResernurException, IOException {
         // arrange
         BookingRequestCreateDTO dto = new BookingRequestCreateDTO();
         dto.setUserId(user.getId().intValue());
@@ -131,12 +130,7 @@ public class BookingRequestServiceTests {
         when(placeRepository.findById(eq(place.getId())))
                 .thenReturn(Optional.of(place));
 
-        when(bookingRequestValidationComponent.validateUserAndPlaceExistance(any(), any()))
-                .thenReturn(null);
-        when(bookingRequestValidationComponent.validateBookingTimes(any(), eq(startTime), eq(endTime), eq(configurationProvider)))
-                .thenReturn(null);
-        when(bookingRequestValidationComponent.validateOverlappingOnCreate(eq(dto), eq(bookingRequestRepository)))
-                .thenReturn(null);
+        // Métodos void ya stubbeados en setup
         when(bookingRequestRepository.save(any(BookingRequest.class))).thenReturn(bookingRequest);
 
         // act
@@ -157,7 +151,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void getById_Success(){
+    public void getById_Success() {
         when(bookingRequestRepository.findById(eq(bookingRequest.getId())))
                 .thenReturn(Optional.of(bookingRequest));
 
@@ -171,7 +165,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void getByUserPaged_Success(){
+    public void getByUserPaged_Success() {
         SearchQuery query = new SearchQuery("", 0, 10);
         Pageable pageable = PageRequest.of(0, 10);
         PageImpl<BookingRequest> page = new PageImpl<>(List.of(bookingRequest), pageable, 1);
@@ -188,7 +182,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void getAllPaged_Success(){
+    public void getAllPaged_Success() {
         SearchQuery query = new SearchQuery("", 0, 5);
         Pageable pageable = PageRequest.of(0, 5);
         PageImpl<BookingRequest> page = new PageImpl<>(List.of(bookingRequest), pageable, 1);
@@ -205,7 +199,22 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void updateByRequester_Success(){
+    public void getAllPaged_NoStatus(){
+        SearchQuery query = new SearchQuery("", 0, 5);
+        Pageable pageable = PageRequest.of(0, 5);
+        PageImpl<BookingRequest> page = new PageImpl<>(List.of(bookingRequest), pageable, 1);
+
+        when(bookingRequestRepository.findAll(pageable))
+                .thenReturn(page);
+
+        PagedResponse<BookingRequestDTO> result = bookingRequestService.getAllPaged(query, null);
+        assertNotNull(result);
+        assertTrue(result.isSuccess());
+        verify(bookingRequestRepository, times(1)).findAll(pageable);
+    }
+
+    @Test
+    public void updateByRequester_Success() throws ResernurException {
         bookingRequest.setStatus(BookingRequestStatus.CHANGES_REQUESTED);
 
         BookingRequestUpdateDTO dto = new BookingRequestUpdateDTO();
@@ -216,12 +225,9 @@ public class BookingRequestServiceTests {
 
         when(bookingRequestRepository.findById(eq(bookingRequest.getId())))
                 .thenReturn(Optional.of(bookingRequest));
-        when(bookingRequestValidationComponent.validateUpdateRequestFields(eq(dto), eq(bookingRequest)))
-                .thenReturn(null);
-        when(bookingRequestValidationComponent.validateBookingTimes(any(), eq(dto.getRequestedStartTime()), eq(dto.getRequestedEndTime()), eq(configurationProvider)))
-                .thenReturn(null);
-        when(bookingRequestValidationComponent.validateOverlappingOnUpdate(eq(dto), eq(bookingRequest), eq(bookingRequestRepository)))
-                .thenReturn(null);
+        org.mockito.Mockito.doNothing().when(bookingRequestValidationComponent).validateUpdateRequestFields(eq(dto), eq(bookingRequest));
+        org.mockito.Mockito.doNothing().when(bookingRequestValidationComponent).validateBookingTimes(any(), eq(dto.getRequestedStartTime()), eq(dto.getRequestedEndTime()), eq(configurationProvider));
+        org.mockito.Mockito.doNothing().when(bookingRequestValidationComponent).validateOverlappingOnUpdate(eq(dto), eq(bookingRequest), eq(bookingRequestRepository));
         when(bookingRequestRepository.save(eq(bookingRequest))).thenReturn(bookingRequest);
 
         StandardResult<BookingRequestDTO> result = bookingRequestService.updateByRequester(bookingRequest.getId(), dto, user.getId().intValue());
@@ -238,7 +244,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void deleteRequest_Success(){
+    public void deleteRequest_Success() {
         when(bookingRequestRepository.findById(eq(bookingRequest.getId())))
                 .thenReturn(Optional.of(bookingRequest));
 
@@ -250,7 +256,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void delete_Success(){
+    public void delete_Success() {
         when(bookingRequestRepository.findById(eq(bookingRequest.getId())))
                 .thenReturn(Optional.of(bookingRequest));
 
@@ -262,7 +268,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void acceptRequest_Success(){
+    public void acceptRequest_Success() {
         BookingRequest overlap = new BookingRequest();
         overlap.setId(2);
         overlap.setUser(user);
@@ -297,7 +303,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void rejectRequest_Success(){
+    public void rejectRequest_Success() {
         when(bookingRequestRepository.findById(eq(bookingRequest.getId())))
                 .thenReturn(Optional.of(bookingRequest));
         when(bookingRequestRepository.save(any(BookingRequest.class)))
@@ -315,7 +321,7 @@ public class BookingRequestServiceTests {
     }
 
     @Test
-    public void requestChanges_Success(){
+    public void requestChanges_Success() {
         when(bookingRequestRepository.findById(eq(bookingRequest.getId())))
                 .thenReturn(Optional.of(bookingRequest));
         when(bookingRequestRepository.save(any(BookingRequest.class)))

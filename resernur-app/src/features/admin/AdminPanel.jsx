@@ -5,6 +5,8 @@ import AdminDashboardView from './views/AdminDashboardView';
 import AdminCreateSpaceView from './views/AdminCreateSpaceView';
 import AdminRequestsView from './views/AdminRequestsView';
 import AdminBookingsView from './views/AdminBookingsView';
+import AdminAnalyticsView from './views/AdminAnalyticsView';
+import UserManagementView from './views/UserManagementView';
 
 const MENU_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -12,6 +14,7 @@ const MENU_ITEMS = [
   { key: 'reservations', label: 'Reservas', icon: 'event_seat' },
   { key: 'resources', label: 'Recursos', icon: 'domain' },
   { key: 'create-space', label: 'Crear espacios', icon: 'add_business' },
+  { key: 'users', label: 'Usuarios', icon: 'group' },
   { key: 'analytics', label: 'Analitica', icon: 'insights' }
 ];
 
@@ -49,6 +52,14 @@ export default function AdminPanel({ editingSpace = null, onEditHandled }) {
           onCancelEdit={onEditHandled}
         />
       );
+    }
+
+    if (activeSection === 'analytics') {
+      return <AdminAnalyticsView />;
+    }
+
+    if (activeSection === 'users') {
+      return <UserManagementView />;
     }
 
     return (

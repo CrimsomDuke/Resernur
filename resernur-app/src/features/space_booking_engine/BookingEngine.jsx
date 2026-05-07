@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { addLocalNotification, addAdminNotification } from '../../utils/notificationCenter';
 
 export default function BookingEngine({ spaceToBook, onGoBack }) {
   // Get the cover image safely regardless of how the space object is structured
@@ -78,18 +77,9 @@ export default function BookingEngine({ spaceToBook, onGoBack }) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data?.errorMessage || `Error ${res.status}: no se pudo crear la solicitud.`);
+        const errorText = data?.errorMessage || data?.error || data?.message || `Error ${res.status}: no se pudo crear la solicitud.`;
+        throw new Error(errorText);
       }
-
-      addLocalNotification({
-        type: 'BOOKING_REQUEST_CREATED',
-        message: `Solicitud de reserva enviada para "${spaceToBook.name}".`,
-      });
-      
-      addAdminNotification({
-        type: 'NEW_BOOKING_REQUEST',
-        message: `Se ha mandado una solicitud de reserva del espacio "${spaceToBook.name}".`,
-      });
 
       setIsSuccess(true);
     } catch (err) {

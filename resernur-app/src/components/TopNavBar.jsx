@@ -1,30 +1,58 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import logoNur from '../assets/nur.png';
-import {
-  getLocalNotifications,
-  getUnreadLocalNotificationsCount,
-  markAllLocalNotificationsAsRead,
-  subscribeToLocalNotificationChanges
-} from '../utils/notificationCenter';
+const API = 'http://localhost:5000';
+
+function authHeaders() {
+  const token = localStorage.getItem('resernur_token');
+  return token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+}
 
 export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin = false }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const notificationPanelRef = useRef(null);
 
   const unreadCount = useMemo(() => {
-    return getUnreadLocalNotificationsCount(isAdmin);
-  }, [notifications, isAdmin]);
+    return notifications.filter(n => !(n.read || n.isRead)).length;
+  }, [notifications]);
 
   useEffect(() => {
-    const refresh = () => {
-      setNotifications(getLocalNotifications(isAdmin));
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`${API}/api/users/me`, { headers: authHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUser(data.data || data);
+        }
+      } catch (e) {}
+    };
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser || !currentUser.id) return;
+
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch(`${API}/api/notifications/user/${currentUser.id}?pageSize=50`, {
+          headers: authHeaders(),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data.content || []);
+        }
+      } catch (err) {
+        // Silently ignore polling errors
+      }
     };
 
-    refresh();
-    const unsubscribe = subscribeToLocalNotificationChanges(refresh);
-    return unsubscribe;
-  }, []);
+    fetchNotifications();
+    const intervalId = setInterval(fetchNotifications, 10000);
+    return () => clearInterval(intervalId);
+  }, [currentUser]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -38,11 +66,21 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleToggleNotifications = () => {
+  const handleToggleNotifications = async () => {
     const nextOpen = !isNotificationsOpen;
     setIsNotificationsOpen(nextOpen);
-    if (nextOpen) {
-      markAllLocalNotificationsAsRead(isAdmin);
+    if (nextOpen && unreadCount > 0 && currentUser?.id) {
+      try {
+        // This endpoint marks unread as read in the backend
+        await fetch(`${API}/api/notifications/user/${currentUser.id}/unread`, {
+          headers: authHeaders(),
+        });
+        
+        // Optimistically update local state
+        setNotifications(prev => prev.map(n => ({ ...n, read: true, isRead: true })));
+      } catch (err) {
+        console.error("Error marking notifications as read", err);
+      }
     }
   };
 
@@ -60,12 +98,7 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
             </span>
           </div>
           <div className="hidden md:flex gap-6">
-            <a 
-              className={`font-medium transition-colors cursor-pointer ${currentView === 'dashboard' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
-              onClick={() => onNavigate("dashboard")}
-            >
-              Dashboard
-            </a>
+
             <a 
               className={`font-medium transition-colors cursor-pointer ${currentView === 'explorer' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
               onClick={() => onNavigate("explorer")}
@@ -73,10 +106,10 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
               Espacios
             </a>
             <a 
-              className={`font-medium transition-colors cursor-pointer ${(currentView === 'bookingEngine' || currentView === 'booking') ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
-              onClick={() => onNavigate("bookingEngine")}
+              className={`font-medium transition-colors cursor-pointer ${currentView === 'my-requests' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
+              onClick={() => onNavigate("my-requests")}
             >
-              Reservas
+              Mis Reservas
             </a>
             <a 
               className={`font-medium transition-colors cursor-pointer ${currentView === 'calendar' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
@@ -123,14 +156,23 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
-                    {notifications.map((notification) => (
-                      <article key={notification.id} className="px-4 py-3 hover:bg-slate-50 transition-colors">
-                        <p className="text-sm text-slate-800">{notification.message}</p>
-                        <p className="text-xs text-slate-500 mt-1">
-                          {new Date(notification.createdAt).toLocaleString()}
-                        </p>
-                      </article>
-                    ))}
+                    {notifications.map((notification) => {
+                      let displayMessage = notification.message;
+                      if (displayMessage === "Your booking request has been created and is pending review") {
+                        displayMessage = "Tu solicitud ha sido creada y está pendiente de revisión.";
+                      }
+
+                      const isReadStatus = notification.read || notification.isRead;
+
+                      return (
+                        <article key={notification.id} className="px-4 py-3 hover:bg-slate-50 transition-colors border-l-4" style={{ borderColor: isReadStatus ? 'transparent' : '#dc2626' }}>
+                          <p className={`text-sm text-slate-800 ${!isReadStatus ? 'font-bold' : ''}`}>{displayMessage}</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </p>
+                        </article>
+                      );
+                    })}
                   </div>
                 )}
               </div>

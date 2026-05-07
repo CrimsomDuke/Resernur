@@ -5,6 +5,7 @@ import SpaceExplorer from './features/visual_space_explorer/SpaceExplorer'
 import BookingEngine from './features/space_booking_engine/BookingEngine'
 import AdminPanel from './features/admin/AdminPanel'
 import CalendarView from './features/calendar/CalendarView'
+import UserRequestsView from './features/user_requests/UserRequestsView'
 
 const ADMIN_ROLE = 'ROLE_ADMINISTRADOR';
 
@@ -141,6 +142,7 @@ function App() {
           <AdminPanel editingSpace={spaceToEdit} onEditHandled={handleEditHandled} />
         )}
 
+<<<<<<< HEAD
         {currentView === "calendar" && <CalendarView onAuthError={handleLogout} />}
 
         {currentView === "booking" && (
@@ -149,6 +151,14 @@ function App() {
             <h2>Sección en Construcción</h2>
             <p>Esta pantalla está siendo diseñada en Figma.</p>
           </div>
+=======
+        {currentView === "calendar" && (
+          <CalendarView onGoBack={() => setCurrentView("explorer")} />
+        )}
+        
+        {currentView === "my-requests" && (
+          <UserRequestsView onNavigate={handleNavigate} />
+>>>>>>> origin/slave
         )}
       </main>
     </div>

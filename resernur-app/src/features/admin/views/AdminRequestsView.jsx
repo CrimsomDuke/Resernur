@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { addAdminNotification, addLocalNotification } from '../../../utils/notificationCenter';
 
 const API = 'http://localhost:5000';
 
@@ -154,13 +153,6 @@ export default function AdminRequestsView() {
       
       const req = requests.find((r) => r.id === id);
       const placeName = req ? (placeCache[req.placeId]?.name ?? `Espacio #${req.placeId}`) : `#${id}`;
-      addAdminNotification({
-        type: 'REQUEST_ACCEPTED',
-        message: `Has aceptado la solicitud de reserva para el ${placeName}.`,
-      });
-      if (req) {
-        addLocalNotification(req.userId, 'SYSTEM', `¡Buenas noticias! Tu solicitud de reserva para ${placeName} ha sido APROBADA.`);
-      }
 
       setSelectedReq(null);
       fetchRequests(page);
@@ -199,21 +191,6 @@ export default function AdminRequestsView() {
       
       const req = requests.find((r) => r.id === id);
       const placeName = req ? (placeCache[req.placeId]?.name ?? `Espacio #${req.placeId}`) : `#${id}`;
-      addAdminNotification({
-        type: type === 'changes' ? 'CHANGES_REQUESTED' : 'REQUEST_REJECTED',
-        message: type === 'changes' 
-          ? `Has solicitado cambios en la reserva del ${placeName}.` 
-          : `Has rechazado la solicitud de reserva del ${placeName}.`
-      });
-      if (req) {
-        addLocalNotification(
-          req.userId,
-          'SYSTEM',
-          type === 'changes'
-            ? `Se han solicitado cambios en tu reserva para ${placeName}. Motivo: ${rejectReason}`
-            : `Tu solicitud de reserva para ${placeName} ha sido RECHAZADA. Motivo: ${rejectReason}`
-        );
-      }
 
       setSelectedReq(null);
       setRejectModal(null);
