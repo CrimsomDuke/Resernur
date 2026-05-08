@@ -9,6 +9,7 @@ import com.resernur.api.dtos.pojos.CustomError;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
+import com.resernur.api.dtos.users.UserDTO;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.Actions;
 import com.resernur.api.models.enums.BookingRequestStatus;
@@ -197,6 +198,8 @@ public class BookingRequestService {
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
         if (req.getStatus() == BookingRequestStatus.ACCEPTED) return new StandardResult<>(false, "Already accepted", null);
+
+        validationComponent.validateUserIsInChargeOrAdmin(userId, req.getPlace(), userRepository);
 
         // Mark accepted
         req.setStatus(BookingRequestStatus.ACCEPTED);

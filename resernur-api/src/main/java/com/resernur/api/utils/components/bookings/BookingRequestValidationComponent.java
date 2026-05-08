@@ -6,9 +6,12 @@ import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.BookingRequestStatus;
 import com.resernur.api.models.enums.PlaceStatus;
+import com.resernur.api.models.enums.UserRole;
 import com.resernur.api.models.places.Place;
 import com.resernur.api.models.users.User;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
+import com.resernur.api.repositories.users.UserRepository;
+import com.resernur.api.services.users.UserService;
 import com.resernur.api.utils.components.config_parameters.ConfigurationProvider;
 import com.resernur.api.utils.date.CustomDateObject;
 import com.resernur.api.utils.date.DateUtils;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Component
@@ -127,5 +131,19 @@ public class BookingRequestValidationComponent {
         }
 
         // éxito: no hace nada
+    }
+
+    public void validateUserIsInChargeOrAdmin(int userId, Place place, UserRepository userRepository){
+        Optional<User> userOpt = userRepository.findById((long) userId);
+        if(userOpt.isEmpty()) throw new ResernurException("Usuario para operacion no encontrado");
+        User user = userOpt.get();
+
+        boolean isAdmin = user.getRole() == UserRole.ADMINISTRADOR;
+        boolean isInCharge = (user.getRole() == UserRole.ENCARGADO) && Objects.equals(place.getUserInCharge().getId(), user.getId());
+
+        if(!isAdmin && !isInCharge){
+            throw new ResernurException("No autorizado, solo administradores o encargados a cargo pueden realizar esta acción");
+        }
+
     }
 }
