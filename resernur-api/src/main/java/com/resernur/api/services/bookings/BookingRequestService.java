@@ -219,7 +219,6 @@ public class BookingRequestService {
             }
         }
 
-
         //Crear el booking
         StandardResult<BookingDTO> resBooking = bookingService.createBookingFromRequest(req);
         if(resBooking.isSuccess() == false) return new StandardResult<>(false, "Failed to create booking from accepted request: " + resBooking.getErrorMessage(), toDTO(req));
@@ -237,6 +236,9 @@ public class BookingRequestService {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
+
+        validationComponent.validateUserIsInChargeOrAdmin(userId, req.getPlace(), userRepository);
+
         req.setStatus(BookingRequestStatus.REJECTED);
         req.setChangesRequestedReason(reason);
 
@@ -255,12 +257,13 @@ public class BookingRequestService {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
+
+        validationComponent.validateUserIsInChargeOrAdmin(userId, req.getPlace(), userRepository);
+
         req.setStatus(BookingRequestStatus.CHANGES_REQUESTED);
         req.setChangesRequestedReason(reason);
         bookingRequestRepository.save(req);
         notificationService.createNotification(req.getUser().getId(), "Se solicitaron cambios. Reason: " + reason);
-
-
         logService.logAction(Actions.REJECT, userId, "BOOKING_REQUEST", req.getId());
 
         return new StandardResult<>(true, "", toDTO(req));

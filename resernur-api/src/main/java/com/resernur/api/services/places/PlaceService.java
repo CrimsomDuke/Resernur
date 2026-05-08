@@ -6,8 +6,10 @@ import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.models.places.Place;
 import com.resernur.api.models.enums.PlaceStatus;
+import com.resernur.api.models.users.User;
 import com.resernur.api.repositories.places.PlaceRepository;
 import com.resernur.api.repositories.users.UserRepository;
+import com.resernur.api.utils.components.places.PlaceValidationComponent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +27,9 @@ public class PlaceService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PlaceValidationComponent placeValidationComponent;
 
     public PagedResponse<PlaceDTO> searchPlaces(SearchQuery query) {
         int page = Math.max(0, query == null ? 0 : query.page);
@@ -52,10 +57,17 @@ public class PlaceService {
         place.setDescription(dto.getDescription());
         place.setCapacity(dto.getCapacity());
         place.setStatus(PlaceStatus.AVAILABLE);
+
+        Optional<User> userInChargeOpt = Optional.empty();
+
         // Asignar usuario responsable
         if (dto.getUserInChargeId() != 0) {
-            userRepository.findById((long) dto.getUserInChargeId()).ifPresent(place::setUserInCharge);
+            userInChargeOpt = userRepository.findById((long) dto.getUserInChargeId());
+            userInChargeOpt.ifPresent(place::setUserInCharge);
         }
+
+        placeValidationComponent.validatePlaceUpdateData(dto, placeRepository, userInChargeOpt);
+
         Place saved = placeRepository.save(place);
         return new StandardResult<>(true, "", toDTO(saved));
     }
@@ -66,9 +78,16 @@ public class PlaceService {
             place.setName(dto.getName());
             place.setDescription(dto.getDescription());
             place.setCapacity(dto.getCapacity());
+
+            Optional<User> userInChargeOpt = Optional.empty();
+
             if (dto.getUserInChargeId() != 0) {
-                userRepository.findById((long) dto.getUserInChargeId()).ifPresent(place::setUserInCharge);
+                userInChargeOpt = userRepository.findById((long) dto.getUserInChargeId());
+                userInChargeOpt.ifPresent(place::setUserInCharge);
             }
+
+            placeValidationComponent.validatePlaceUpdateData(dto, placeRepository, userInChargeOpt);
+
             return placeRepository.save(place);
         });
         if (updated.isPresent()) return new StandardResult<>(true, "", toDTO(updated.get()));
