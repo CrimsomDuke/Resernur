@@ -4,6 +4,7 @@ import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.dtos.pojos.StandardResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -28,6 +29,11 @@ public class GlobalExceptionHandler {
         result.setErrorMessage("An unexpected internal error occurred. Please try again later.");
         result.setSuccess(false);
         result.setData(null);
+
+        if(e instanceof AccessDeniedException){
+            result.setErrorMessage("No tienes los permisos necesarios para esta accion");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
+        }
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR) // Use 500 for unknown errors

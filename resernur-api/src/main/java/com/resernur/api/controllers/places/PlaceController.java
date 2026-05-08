@@ -93,7 +93,11 @@ public class PlaceController {
     }
 
     @PostMapping("{placeId}/change-status/{status}")
-    public ResponseEntity<StandardResult<PlaceDTO>> changeStatus(@RequestParam int placeId, @PathVariable PlaceStatus status){
-        return null;
+    @RequiresAnyRole(roles = {"ADMINISTRADOR"})
+    public ResponseEntity<StandardResult<PlaceDTO>> changeStatus(@RequestParam int placeId,
+                                                                 @PathVariable PlaceStatus status){
+        StandardResult<PlaceDTO> res = placeService.changePlaceStatus(placeId, status);
+        if (!res.isSuccess()) return ResponseEntity.badRequest().body(res);
+        return ResponseEntity.status(HttpStatus.OK).body(res);
     }
 }

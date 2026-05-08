@@ -18,8 +18,8 @@ public class PlaceValidationComponent {
             throw new ResernurException("Usuario responsable no encontrado");
         }
 
-        if(dto.getUserInChargeId() != 0 && userOpt.get().getRole() != UserRole.ENCARGADO
-                || userOpt.get().getRole() == UserRole.ADMINISTRADOR){
+        if(dto.getUserInChargeId() != 0 && (userOpt.get().getRole() != UserRole.ENCARGADO
+                && userOpt.get().getRole() != UserRole.ADMINISTRADOR)){
             throw new ResernurException("El usuario responsable debe tener el rol de ENCARGADO o ADMINISTRADOR");
         }
     }

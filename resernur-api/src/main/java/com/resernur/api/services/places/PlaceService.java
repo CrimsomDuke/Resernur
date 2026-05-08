@@ -121,6 +121,7 @@ public class PlaceService {
         dto.setDescription(place.getDescription());
         dto.setCapacity(place.getCapacity());
         dto.setUserInChargeId(place.getUserInCharge() != null ? place.getUserInCharge().getId().intValue() : 0);
+        dto.setStatus(place.getStatus());
         return dto;
     }
 }
