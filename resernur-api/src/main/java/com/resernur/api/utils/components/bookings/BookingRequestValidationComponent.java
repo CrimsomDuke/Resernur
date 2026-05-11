@@ -27,7 +27,7 @@ public class BookingRequestValidationComponent {
 
     private final DateUtils dateUtils = new DateUtils();
 
-    public void validateUserAndPlaceExistance(Optional<User> userOpt, Optional<Place> placeOpt) throws ResernurException {
+    public void validateUserAndPlace(BookingRequestCreateDTO dto, Optional<User> userOpt, Optional<Place> placeOpt) throws ResernurException {
         if (userOpt.isEmpty()) {
             throw new ResernurException("Usuario no encontrado");
         }
@@ -40,7 +40,6 @@ public class BookingRequestValidationComponent {
         if(placeOpt.get().getStatus() != PlaceStatus.AVAILABLE){
             throw new ResernurException("El lugar no está disponible para reservas");
         }
-
     }
 
     public void validateBookingTimes(LocalDateTime requestCreatedTime,

@@ -128,7 +128,7 @@ public class PlaceService {
 
         if(p.getStatus() == PlaceStatus.UNDER_MAINTENANCE){
             cancelRequestsForAPlace(id);
-            cancelPendingRequestsForAPlace(id);
+            cancelPendingRequestsForAPlace(id, "Debido a razones de mantenimiento, tu solicitud de reserva para el lugar " + p.getName() + " ha sido rechazada.");
         }
 
         Place saved = placeRepository.save(p);
@@ -147,12 +147,13 @@ public class PlaceService {
         }
     }
 
-    public void cancelPendingRequestsForAPlace(int placeId){
+    public void cancelPendingRequestsForAPlace(int placeId, String message){
         var pendingRequests = bookingRequestRepository.findActiveRequestsByPlaceId(placeId);
         for(var request : pendingRequests){
             request.setStatus(com.resernur.api.models.enums.BookingRequestStatus.REJECTED);
+            request.setChangesRequestedReason(message);
             bookingRequestRepository.save(request);
-            notificationService.createNotification(request.getUser().getId(), "Debido a razones de mantenimiento, tu solicitud de reserva para el lugar " + request.getPlace().getName() + " ha sido rechazada.");
+            notificationService.createNotification(request.getUser().getId(), message);
         }
     }
 

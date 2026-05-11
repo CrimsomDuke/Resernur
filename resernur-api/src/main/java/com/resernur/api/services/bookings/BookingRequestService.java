@@ -82,7 +82,7 @@ public class BookingRequestService {
         // Validar usuario
         var userOpt = userRepository.findById((long) dto.getUserId());
         var placeOpt = placeRepository.findById(dto.getPlaceId());
-        validationComponent.validateUserAndPlaceExistance(userOpt, placeOpt);
+        validationComponent.validateUserAndPlace(dto, userOpt, placeOpt);
         // Validar fechas
         validationComponent.validateBookingTimes(LocalDateTime.now(), dto.getRequestedStartTime(), dto.getRequestedEndTime(), configurationProvider);
         // Validar solapamientos: no debe haber otras requests en ESE periodo para el mismo lugar
