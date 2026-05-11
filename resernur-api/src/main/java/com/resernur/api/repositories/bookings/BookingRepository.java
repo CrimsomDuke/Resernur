@@ -51,4 +51,7 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
             @Param("now") LocalDateTime now,
             Pageable pageable
     );
+
+    @Query("SELECT b FROM Booking b WHERE b.place.id = :placeId AND b.status = 'COMPLETED' AND b.endTime > :now")
+    List<Booking> findCompletedByPlaceIdAndEndTimeAfter(@Param("placeId") Integer placeId, @Param("now") LocalDateTime now);
 }

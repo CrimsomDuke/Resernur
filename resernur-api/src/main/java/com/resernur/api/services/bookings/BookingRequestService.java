@@ -10,11 +10,14 @@ import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.dtos.users.UserDTO;
+import com.resernur.api.models.bookings.Booking;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.Actions;
 import com.resernur.api.models.enums.BookingRequestStatus;
+import com.resernur.api.models.enums.PlaceStatus;
 import com.resernur.api.models.enums.UserRole;
 import com.resernur.api.models.files.File;
+import com.resernur.api.models.places.Place;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
 import com.resernur.api.repositories.users.UserRepository;
 import com.resernur.api.repositories.places.PlaceRepository;
@@ -200,6 +203,11 @@ public class BookingRequestService {
         if (req.getStatus() == BookingRequestStatus.ACCEPTED) return new StandardResult<>(false, "Already accepted", null);
 
         validationComponent.validateUserIsInChargeOrAdmin(userId, req.getPlace(), userRepository);
+
+        //Mark place as RESERVED
+        Place place = req.getPlace();
+        place.setStatus(PlaceStatus.RESERVED);
+        placeRepository.save(place);
 
         // Mark accepted
         req.setStatus(BookingRequestStatus.ACCEPTED);
