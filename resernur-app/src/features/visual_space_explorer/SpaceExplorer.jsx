@@ -132,6 +132,55 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
     ids.forEach((id) => fetchSpaceImages(id, token));
   };
 
+  const handleToggleMaintenance = async () => {
+    if (!selectedSpace) return;
+    try {
+      const newStatus = selectedSpace.status === 'UNDER_MAINTENANCE' ? 'AVAILABLE' : 'UNDER_MAINTENANCE';
+      const token = localStorage.getItem('resernur_token');
+      const res = await fetch(`http://localhost:5000/api/places/${selectedSpace.id}/change-status/${newStatus}?placeId=${selectedSpace.id}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const updatedSpace = { ...selectedSpace, status: newStatus };
+        setSelectedSpace(updatedSpace);
+        setSpaces(prev => prev.map(s => s.id === updatedSpace.id ? updatedSpace : s));
+      } else {
+        const errText = await res.text();
+        alert(`Error: HTTP ${res.status} - ${errText}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error de red al intentar cambiar el estado.");
+    }
+  };
+
+  const handleDeleteSpace = async () => {
+    if (!selectedSpace) return;
+    if (!window.confirm(`¿Estás completamente seguro de que deseas eliminar permanentemente el espacio "${selectedSpace.name}"? Esta acción no se puede deshacer y fallará si existen reservas asociadas.`)) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('resernur_token');
+      const res = await fetch(`http://localhost:5000/api/places/${selectedSpace.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        alert("Espacio eliminado con éxito.");
+        setSpaces(prev => prev.filter(s => s.id !== selectedSpace.id));
+        setSelectedSpace(null);
+      } else {
+        const errText = await res.text();
+        alert(`No se pudo eliminar el espacio (Probablemente porque tiene reservas asociadas).\nError HTTP ${res.status}: ${errText}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error de red al intentar eliminar el espacio.");
+    }
+  };
+
   const filteredSpaces = spaces.filter(s => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return true;
@@ -237,7 +286,12 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
                 onClick={() => setSelectedSpace(space)}
               >
                 <div className="relative h-48">
-                  <img alt={space.name} className="w-full h-full object-cover" src={getCoverImage(space)} />
+                  <img alt={space.name} className={`w-full h-full object-cover ${space.status === 'UNDER_MAINTENANCE' ? 'grayscale opacity-70' : ''}`} src={getCoverImage(space)} />
+                  {space.status === 'UNDER_MAINTENANCE' && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <span className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold uppercase tracking-widest text-sm shadow-lg border border-white/20 backdrop-blur-sm">En Mantenimiento</span>
+                    </div>
+                  )}
                   <div className="absolute top-4 left-4">
                     <span className="glass-card px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase text-primary border border-white/20">{space.capacity} Pax</span>
                   </div>
@@ -314,9 +368,12 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
               )}
 
               <div className="absolute bottom-10 left-10 text-white">
-                <div className="flex gap-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-4">
                   <span className="bg-primary px-3 py-1 rounded text-[10px] font-bold tracking-widest uppercase">Espacio Verificado</span>
                   <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded text-[10px] font-bold tracking-widest uppercase">Uso Académico</span>
+                  {selectedSpace.status === 'UNDER_MAINTENANCE' && (
+                    <span className="bg-red-600 px-3 py-1 rounded text-[10px] font-bold tracking-widest uppercase shadow-lg border border-white/20">En Mantenimiento</span>
+                  )}
                 </div>
                 <h2 className="font-headline text-4xl md:text-5xl font-extrabold tracking-tight mb-2 drop-shadow-md">{selectedSpace.name}</h2>
                 <p className="text-lg opacity-90">{selectedSpace.description || "Ficha técnica institucional en detalle."}</p>
@@ -373,21 +430,42 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
               </div>
 
               <div className="space-y-4 pt-4 border-t border-surface-container">
-                {isAdmin && typeof onEditSpace === 'function' && (
-                  <button
-                    onClick={() => onEditSpace(selectedSpace)}
-                    className="w-full bg-secondary-container text-primary py-3 rounded-xl font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">edit</span>
-                    Editar informacion del espacio
-                  </button>
+                {isAdmin && (
+                  <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      {typeof onEditSpace === 'function' && (
+                        <button
+                          onClick={() => onEditSpace(selectedSpace)}
+                          className="w-full bg-secondary-container text-primary py-3 rounded-xl font-semibold hover:bg-secondary-container/80 transition-all flex items-center justify-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                          Editar Espacio
+                        </button>
+                      )}
+                      <button
+                        onClick={handleToggleMaintenance}
+                        className={`w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 border ${selectedSpace.status === 'UNDER_MAINTENANCE' ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200' : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'}`}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">{selectedSpace.status === 'UNDER_MAINTENANCE' ? 'check_circle' : 'build'}</span>
+                        {selectedSpace.status === 'UNDER_MAINTENANCE' ? 'Habilitar' : 'Mantenimiento'}
+                      </button>
+                    </div>
+                    <button
+                      onClick={handleDeleteSpace}
+                      className="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded-xl font-semibold hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete_forever</span>
+                      Eliminar Espacio Permanentemente
+                    </button>
+                  </div>
                 )}
                 <button
                   onClick={() => onReserve(selectedSpace)}
-                  className="w-full bg-primary-container text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary-container/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 group"
+                  disabled={selectedSpace.status === 'UNDER_MAINTENANCE'}
+                  className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 group transition-all shadow-lg ${selectedSpace.status === 'UNDER_MAINTENANCE' ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none' : 'bg-primary-container text-white shadow-primary-container/20 hover:scale-[1.02]'}`}
                 >
-                  Continuar Reserva
-                  <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+                  {selectedSpace.status === 'UNDER_MAINTENANCE' ? 'Espacio Inhabilitado' : 'Continuar Reserva'}
+                  <span className={`material-symbols-outlined transition-transform ${selectedSpace.status === 'UNDER_MAINTENANCE' ? '' : 'group-hover:translate-x-1'}`}>{selectedSpace.status === 'UNDER_MAINTENANCE' ? 'lock' : 'arrow_forward'}</span>
                 </button>
               </div>
             </div>

@@ -9,9 +9,11 @@ import com.resernur.api.dtos.pojos.CustomError;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
+import com.resernur.api.dtos.users.UserDTO;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.Actions;
 import com.resernur.api.models.enums.BookingRequestStatus;
+import com.resernur.api.models.enums.UserRole;
 import com.resernur.api.models.files.File;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
 import com.resernur.api.repositories.users.UserRepository;
@@ -104,7 +106,8 @@ public class BookingRequestService {
         }
 
         BookingRequest saved = bookingRequestRepository.save(bookingRequest);
-        notificationService.createNotification((long) dto.getUserId(), "Your booking request has been created and is pending review");
+        notificationService.createNotification((long) dto.getUserId(), "Tu solicitud de reserva fue enviada y esta pendiente de revision");
+        notificationService.createNotificationForUsersInRole(UserRole.ADMINISTRADOR, "Se creo una nueva reserva");
 
         logService.logAction(Actions.CREATE, userId, "BOOKING_REQUEST", saved.getId());
 
@@ -196,6 +199,8 @@ public class BookingRequestService {
         BookingRequest req = opt.get();
         if (req.getStatus() == BookingRequestStatus.ACCEPTED) return new StandardResult<>(false, "Already accepted", null);
 
+        validationComponent.validateUserIsInChargeOrAdmin(userId, req.getPlace(), userRepository);
+
         // Mark accepted
         req.setStatus(BookingRequestStatus.ACCEPTED);
         bookingRequestRepository.save(req);
@@ -214,7 +219,6 @@ public class BookingRequestService {
             }
         }
 
-
         //Crear el booking
         StandardResult<BookingDTO> resBooking = bookingService.createBookingFromRequest(req);
         if(resBooking.isSuccess() == false) return new StandardResult<>(false, "Failed to create booking from accepted request: " + resBooking.getErrorMessage(), toDTO(req));
@@ -232,6 +236,9 @@ public class BookingRequestService {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
+
+        validationComponent.validateUserIsInChargeOrAdmin(userId, req.getPlace(), userRepository);
+
         req.setStatus(BookingRequestStatus.REJECTED);
         req.setChangesRequestedReason(reason);
 
@@ -250,12 +257,13 @@ public class BookingRequestService {
         Optional<BookingRequest> opt = bookingRequestRepository.findById(requestId);
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking request not found", null);
         BookingRequest req = opt.get();
+
+        validationComponent.validateUserIsInChargeOrAdmin(userId, req.getPlace(), userRepository);
+
         req.setStatus(BookingRequestStatus.CHANGES_REQUESTED);
         req.setChangesRequestedReason(reason);
         bookingRequestRepository.save(req);
         notificationService.createNotification(req.getUser().getId(), "Se solicitaron cambios. Reason: " + reason);
-
-
         logService.logAction(Actions.REJECT, userId, "BOOKING_REQUEST", req.getId());
 
         return new StandardResult<>(true, "", toDTO(req));

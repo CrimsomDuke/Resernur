@@ -4,42 +4,39 @@ import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.dtos.pojos.StandardResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.Map;
-
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException e) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("error", "Credenciales incorrectas (Password error)"));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        String errorMessage = ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", errorMessage));
-    }
-
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
-    }
-
     @ExceptionHandler(ResernurException.class)
-    public ResponseEntity<StandardResult<Boolean>> handleResernurException(ResernurException e){
-        StandardResult<Boolean> result = new StandardResult<>();
+    public ResponseEntity<StandardResult<Void>> handleResernurException(ResernurException e){
+        StandardResult<Void> result = new StandardResult<>();
         result.setErrorMessage(e.getErrorMessage());
         result.setSuccess(false);
         result.setData(null);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<StandardResult<Void>> handleGenericException(Exception e) {
+        StandardResult<Void> result = new StandardResult<>();
+
+        result.setErrorMessage("An unexpected internal error occurred. Please try again later.");
+        result.setSuccess(false);
+        result.setData(null);
+
+        if(e instanceof AccessDeniedException){
+            result.setErrorMessage("No tienes los permisos necesarios para esta accion");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR) // Use 500 for unknown errors
                 .body(result);
     }
 }

@@ -160,6 +160,8 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
                       let displayMessage = notification.message;
                       if (displayMessage === "Your booking request has been created and is pending review") {
                         displayMessage = "Tu solicitud ha sido creada y está pendiente de revisión.";
+                      } else if (displayMessage === "Se creo una nueva reserva") {
+                        displayMessage = "Ha llegado una nueva solicitud de reserva.";
                       }
 
                       const isReadStatus = notification.read || notification.isRead;
