@@ -198,13 +198,13 @@ export default function UserRequestsView({ onNavigate }) {
                   </div>
 
                   {/* Reject / Changes Reason Block */}
-                  {req.reason && (req.status === 'REJECTED' || req.status === 'CHANGES_REQUESTED') && (
+                  {(req.status === 'REJECTED' || req.status === 'CHANGES_REQUESTED') && (
                     <div className="bg-slate-50 border-t border-surface-container-high p-4 md:px-8 text-sm">
                       <div className="flex items-start gap-3">
                         <span className="material-symbols-outlined text-red-600 mt-0.5">feedback</span>
                         <div>
                           <p className="font-bold text-slate-800 mb-0.5">Mensaje del Administrador:</p>
-                          <p className="text-slate-600">Rechazada / Se requieren cambios.</p>
+                          <p className="text-slate-600">{req.changesRequestedReason || "No se especificó un motivo."}</p>
                         </div>
                       </div>
                     </div>

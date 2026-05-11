@@ -4,6 +4,7 @@ import com.resernur.api.dtos.notifications.NotificationDTO;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
+import com.resernur.api.models.enums.UserRole;
 import com.resernur.api.models.notifications.Notification;
 import com.resernur.api.models.users.User;
 import com.resernur.api.repositories.notifications.NotificationRepository;
@@ -61,6 +62,31 @@ public class NotificationService {
         n.setRead(false);
         Notification saved = notificationRepository.save(n);
         return new StandardResult<>(true, "", toDTO(saved));
+    }
+
+    public PagedResponse<NotificationDTO> createNotificationForUsersInRole(UserRole role, String message){
+        List<User> users = userRepository.findByRole(role);
+        List<NotificationDTO> list = List.of();
+        for (User user : users) {
+            Notification n = new Notification();
+            n.setUser(user);
+            n.setMessage(message);
+            n.setRead(false);
+            try{
+                Notification saved = notificationRepository.save(n);
+                list.add(toDTO(saved));
+            }catch (Exception ex){
+                // log error but continue with other users
+                System.err.println("Error creating notification for user " + user.getId() + ": " + ex.getMessage());
+                continue;
+            }
+        }
+
+        PagedResponse<NotificationDTO> response = new PagedResponse<>();
+        response.setContent(list);
+        response.setSuccess(true);
+
+        return response;
     }
 
     private NotificationDTO toDTO(Notification n) {

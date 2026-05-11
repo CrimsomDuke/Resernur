@@ -5,9 +5,13 @@ import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
 import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.BookingRequestStatus;
+import com.resernur.api.models.enums.PlaceStatus;
+import com.resernur.api.models.enums.UserRole;
 import com.resernur.api.models.places.Place;
 import com.resernur.api.models.users.User;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
+import com.resernur.api.repositories.users.UserRepository;
+import com.resernur.api.services.users.UserService;
 import com.resernur.api.utils.components.config_parameters.ConfigurationProvider;
 import com.resernur.api.utils.date.CustomDateObject;
 import com.resernur.api.utils.date.DateUtils;
@@ -15,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Component
@@ -32,7 +37,10 @@ public class BookingRequestValidationComponent {
             throw new ResernurException("Lugar no encontrado");
         }
 
-        // éxito: no hace nada
+        if(placeOpt.get().getStatus() != PlaceStatus.AVAILABLE){
+            throw new ResernurException("El lugar no está disponible para reservas");
+        }
+
     }
 
     public void validateBookingTimes(LocalDateTime requestCreatedTime,
@@ -79,8 +87,6 @@ public class BookingRequestValidationComponent {
         if(!dateUtils.DatesSpanInBetweenHours(startTimeCustom, endTimeCustom, OPENING_TIME, CLOSING_TIME)){
             throw new ResernurException("Las reservas deben estar dentro del horario de atención: " + OPENING_TIME + " a " + CLOSING_TIME);
         }
-
-        // éxito: no hace nada
     }
 
     public void validateOverlappingOnCreate(BookingRequestCreateDTO dto, BookingRequestRepository bookingRequestRepository) throws ResernurException {
@@ -93,8 +99,6 @@ public class BookingRequestValidationComponent {
         if (overlaps != null && !overlaps.isEmpty()) {
             throw new ResernurException("Ya hay reservas en esta ventana de tiempo para este lugar");
         }
-
-        // éxito: no hace nada
     }
 
     public void validateUpdateRequestFields(BookingRequestUpdateDTO dto, BookingRequest req) throws ResernurException {
@@ -127,5 +131,19 @@ public class BookingRequestValidationComponent {
         }
 
         // éxito: no hace nada
+    }
+
+    public void validateUserIsInChargeOrAdmin(int userId, Place place, UserRepository userRepository){
+        Optional<User> userOpt = userRepository.findById((long) userId);
+        if(userOpt.isEmpty()) throw new ResernurException("Usuario para operacion no encontrado");
+        User user = userOpt.get();
+
+        boolean isAdmin = user.getRole() == UserRole.ADMINISTRADOR;
+        boolean isInCharge = (user.getRole() == UserRole.ENCARGADO) && Objects.equals(place.getUserInCharge().getId(), user.getId());
+
+        if(!isAdmin && !isInCharge){
+            throw new ResernurException("No autorizado, solo administradores o encargados a cargo pueden realizar esta acción");
+        }
+
     }
 }

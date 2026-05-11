@@ -1,10 +1,13 @@
 package com.resernur.api.controllers.places;
 
 import com.resernur.api.dtos.places.PlaceDTO;
+import com.resernur.api.dtos.places.PlaceImageDTO;
 import com.resernur.api.dtos.places.PlaceImageResponseDTO;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
+import com.resernur.api.models.enums.PlaceStatus;
+import com.resernur.api.models.places.Place;
 import com.resernur.api.services.places.PlaceImageService;
 import com.resernur.api.services.places.PlaceService;
 import com.resernur.api.utils.aspect.RequiresAnyRole;
@@ -87,5 +90,14 @@ public class PlaceController {
                                                                                  @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
         SearchQuery q = new SearchQuery(null, page, pageSize);
         return ResponseEntity.ok(placeImageService.getImagesForPlace(placeId, q));
+    }
+
+    @PostMapping("{placeId}/change-status/{status}")
+    @RequiresAnyRole(roles = {"ADMINISTRADOR"})
+    public ResponseEntity<StandardResult<PlaceDTO>> changeStatus(@RequestParam int placeId,
+                                                                 @PathVariable PlaceStatus status){
+        StandardResult<PlaceDTO> res = placeService.changePlaceStatus(placeId, status);
+        if (!res.isSuccess()) return ResponseEntity.badRequest().body(res);
+        return ResponseEntity.status(HttpStatus.OK).body(res);
     }
 }
