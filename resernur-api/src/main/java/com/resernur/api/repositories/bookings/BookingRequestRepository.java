@@ -26,5 +26,8 @@ public interface BookingRequestRepository extends JpaRepository<BookingRequest, 
     //find all active request for a place
     @Query("SELECT br FROM BookingRequest br WHERE br.place.id = :placeId AND br.status IN ('PENDING', 'ACCEPTED', 'CHANGES_REQUESTED')")
     List<BookingRequest> findActiveRequestsByPlaceId(Integer placeId);
+
+    @Query("SELECT br FROM BookingRequest br WHERE br.requestedEndTime < CURRENT_TIMESTAMP AND (br.status = 'PENDING' OR br.status = 'CHANGES_REQUESTED' )")
+    List<BookingRequest> findExpireRequests();
 }
 

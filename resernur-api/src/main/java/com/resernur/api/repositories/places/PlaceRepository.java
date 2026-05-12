@@ -17,7 +17,7 @@ public interface PlaceRepository extends JpaRepository<Place, Integer> {
     Page<Place> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(String name, String description, Pageable pageable);
 
     @Query(
-            value = "SELECT DISTINCT p.* FROM Place p JOIN Booking b on p.id = b.place_id WHERE b.end_time < CURRENT_TIMESTAMP",
+            value = "SELECT DISTINCT p.* FROM Place p JOIN Booking b on p.id = b.place_id WHERE b.end_time < CURRENT_TIMESTAMP and p.status NOT IN ('AVAILABLE')",
             nativeQuery = true
     )
     List<Place> findAllPlacesWithPastBookings();

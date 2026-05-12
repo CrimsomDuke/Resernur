@@ -142,7 +142,7 @@ public class BookingRequestServiceTests {
         assertNotNull(result.getData());
         assertEquals(bookingRequest.getId(), result.getData().getId());
 
-        verify(bookingRequestValidationComponent, times(1)).validateUserAndPlaceExistance(any(), any());
+        verify(bookingRequestValidationComponent, times(1)).validateUserAndPlace(dto, any(), any());
         verify(bookingRequestValidationComponent, times(1)).validateBookingTimes(any(), eq(startTime), eq(endTime), eq(configurationProvider));
         verify(bookingRequestValidationComponent, times(1)).validateOverlappingOnCreate(eq(dto), eq(bookingRequestRepository));
         verify(bookingRequestRepository, times(1)).save(any(BookingRequest.class));
