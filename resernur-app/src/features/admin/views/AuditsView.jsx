@@ -324,8 +324,8 @@ export default function AuditsView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/10">
-                  {auditLogs.map((log) => (
-                    <AuditRow key={log.id} log={log} adminUsers={adminUsers} />
+                  {auditLogs.map((log, idx) => (
+                    <AuditRow key={`${log.Id}-${currentPage}-${idx}`} log={log} adminUsers={adminUsers} />
                   ))}
                 </tbody>
               </table>
@@ -347,7 +347,7 @@ export default function AuditsView() {
                 
                 {Array.from({ length: Math.min(3, totalPages) }).map((_, idx) => (
                   <button
-                    key={idx}
+                    key={`page-${idx}`}
                     onClick={() => setCurrentPage(idx)}
                     className={`w-8 h-8 flex items-center justify-center rounded-lg font-body-semibold ${
                       currentPage === idx
@@ -363,6 +363,7 @@ export default function AuditsView() {
                   <>
                     <span className="px-2 text-outline-variant">...</span>
                     <button 
+                      key={`page-last-${totalPages}`}
                       onClick={() => setCurrentPage(totalPages - 1)}
                       className="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant transition-colors"
                     >
