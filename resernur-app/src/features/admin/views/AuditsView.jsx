@@ -123,11 +123,18 @@ export default function AuditsView() {
       setLoading(true);
       setError(null);
       try {
+        const token = localStorage.getItem('resernur_token');
+        if (!token) {
+          setError('No hay sesión activa. Por favor inicia sesión.');
+          setLoading(false);
+          return;
+        }
+
         const params = new URLSearchParams();
         if (adminFilter && adminFilter.trim()) {
           params.append('executorId', adminFilter);
         }
-        if (actionType && actionType !== 'all') {
+        if (actionType && actionType !== '') {
           params.append('action', actionType);
         }
         params.append('page', currentPage);
@@ -137,11 +144,16 @@ export default function AuditsView() {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
 
         if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem('resernur_token');
+            setError('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+            return;
+          }
           throw new Error(`Error: ${response.status}`);
         }
 
@@ -164,11 +176,14 @@ export default function AuditsView() {
   useEffect(() => {
     const fetchAdminUsers = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/users?role=ADMINISTRADOR', {
+        const token = localStorage.getItem('resernur_token');
+        if (!token) return;
+
+        const response = await fetch('http://localhost:5000/api/users?page=0&pageSize=200', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
         
