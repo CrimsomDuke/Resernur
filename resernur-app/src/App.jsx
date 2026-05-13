@@ -142,10 +142,6 @@ function App() {
           <AdminPanel editingSpace={spaceToEdit} onEditHandled={handleEditHandled} />
         )}
 
-        {currentView === "admin" && (
-          <AdminPanel editingSpace={spaceToEdit} onEditHandled={handleEditHandled} />
-        )}
-
         {currentView === "calendar" && (
           <CalendarView onGoBack={() => setCurrentView("explorer")} />
         )}
@@ -153,4 +149,11 @@ function App() {
         {currentView === "my-requests" && (
           <UserRequestsView onNavigate={handleNavigate} />
         )}
+
+      </main>
+    </div>
+  )
+}
+
+export default App
 
