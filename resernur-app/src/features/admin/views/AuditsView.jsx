@@ -3,26 +3,26 @@ import React, { useState, useEffect } from 'react';
 // Mapping de iconos según el tipo de recurso
 const getResourceIcon = (entityName) => {
   const iconMap = {
-    'BOOKINGS': 'event_seat',
-    'PLACES': 'domain',
-    'USERS': 'person',
-    'REQUESTS': 'pending_actions',
-    'ROLES': 'security',
-    'REPORTS': 'picture_as_pdf',
-    'default': 'info'
+    BOOKINGS: 'event_seat',
+    PLACES: 'domain',
+    USERS: 'person',
+    REQUESTS: 'pending_actions',
+    ROLES: 'security',
+    REPORTS: 'picture_as_pdf',
+    default: 'info'
   };
-  return iconMap[entityName] || iconMap['default'];
+  return iconMap[entityName] || iconMap.default;
 };
 
 // Mapping de acciones a iconos de color
 const getActionColor = (action) => {
   const colorMap = {
-    'CREATE': 'bg-emerald-500',
-    'READ': 'bg-blue-500',
-    'UPDATE': 'bg-orange-500',
-    'DELETE': 'bg-red-500',
-    'APPROVE': 'bg-green-500',
-    'REJECT': 'bg-red-500'
+    CREATE: 'bg-emerald-500',
+    READ: 'bg-blue-500',
+    UPDATE: 'bg-orange-500',
+    DELETE: 'bg-red-500',
+    APPROVE: 'bg-green-500',
+    REJECT: 'bg-red-500'
   };
   return colorMap[action] || 'bg-gray-500';
 };
@@ -41,18 +41,18 @@ const formatDateTime = (timestamp) => {
   if (diffMins < 60) return `Hace ${diffMins} min`;
   if (diffHours < 24) return `Hace ${diffHours}h`;
   if (diffDays < 7) return `Hace ${diffDays}d`;
-  
-  return date.toLocaleDateString('es-ES', { 
-    day: '2-digit', 
-    month: 'short', 
+
+  return date.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   });
 };
 
-const AuditRow = ({ log, adminUsers }) => {
-  const adminUser = adminUsers.find(u => u.id === log.executorId);
+const AuditRow = ({ log, adminUsers, onShowDetails }) => {
+  const adminUser = adminUsers.find((u) => u.id === log.executorId);
   const adminName = adminUser?.name || `Admin ${log.executorId}`;
   const resourceIcon = getResourceIcon(log.entityName);
   const actionColor = getActionColor(log.action);
@@ -68,8 +68,8 @@ const AuditRow = ({ log, adminUsers }) => {
       </td>
       <td className="px-6 py-4 align-middle">
         <div className="flex items-center gap-3">
-          <img 
-            className="w-8 h-8 rounded-full border border-outline-variant/50" 
+          <img
+            className="w-8 h-8 rounded-full border border-outline-variant/50"
             src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${adminName}`}
             alt={adminName}
           />
@@ -92,7 +92,7 @@ const AuditRow = ({ log, adminUsers }) => {
         </div>
       </td>
       <td className="px-6 py-4 align-middle text-right">
-        <button className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors" title={`Detalles: ${log.description}`}>
+        <button onClick={() => onShowDetails && onShowDetails()} className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors" title={`Detalles: ${log.description}`}>
           <span className="material-symbols-outlined text-[20px]">visibility</span>
         </button>
       </td>
@@ -101,15 +101,13 @@ const AuditRow = ({ log, adminUsers }) => {
 };
 
 export default function AuditsView() {
-  const [dateRange, setDateRange] = useState({
-    start: '01 Ene, 2024',
-    end: '15 Feb, 2024'
-  });
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [selectedLog, setSelectedLog] = useState(null);
   const [actionType, setActionType] = useState('');
   const [adminFilter, setAdminFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  
+
   const [auditLogs, setAuditLogs] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -131,12 +129,10 @@ export default function AuditsView() {
         }
 
         const params = new URLSearchParams();
-        if (adminFilter && adminFilter.trim()) {
-          params.append('executorId', adminFilter);
-        }
-        if (actionType && actionType !== '') {
-          params.append('action', actionType);
-        }
+        if (adminFilter && adminFilter.trim()) params.append('executorId', adminFilter);
+        if (actionType && actionType !== '') params.append('action', actionType);
+        if (dateRange.start && dateRange.start !== '') params.append('startDate', dateRange.start);
+        if (dateRange.end && dateRange.end !== '') params.append('endDate', dateRange.end);
         params.append('page', currentPage);
         params.append('pageSize', pageSize);
 
@@ -170,7 +166,7 @@ export default function AuditsView() {
     };
 
     fetchAuditLogs();
-  }, [currentPage, pageSize, actionType, adminFilter]);
+  }, [currentPage, pageSize, actionType, adminFilter, dateRange]);
 
   // Obtener lista de usuarios administradores
   useEffect(() => {
@@ -186,7 +182,7 @@ export default function AuditsView() {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setAdminUsers(data.content || data || []);
@@ -199,6 +195,9 @@ export default function AuditsView() {
     fetchAdminUsers();
   }, []);
 
+  const startIndex = auditLogs.length > 0 ? currentPage * pageSize + 1 : 0;
+  const endIndex = Math.min((currentPage + 1) * pageSize, totalElements);
+
   return (
     <div className="space-y-8">
       {/* Header Section */}
@@ -209,16 +208,12 @@ export default function AuditsView() {
           <p className="text-on-surface-variant mt-2 font-body-base">Monitoreo y trazabilidad de todas las acciones administrativas realizadas en ReserNur.</p>
         </div>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="px-5 py-2.5 bg-surface-container-high text-primary font-body-semibold rounded-xl flex items-center gap-2 hover:bg-surface-variant transition-colors shadow-sm"
           >
             <span className="material-symbols-outlined text-[20px]">refresh</span>
             <span>Actualizar</span>
-          </button>
-          <button className="px-6 py-2.5 bg-gradient-to-r from-primary-container to-[#003366] text-white font-body-semibold rounded-xl flex items-center gap-2 hover:opacity-95 transition-opacity shadow-sm">
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            <span>Exportar</span>
           </button>
         </div>
       </div>
@@ -230,29 +225,29 @@ export default function AuditsView() {
           <div className="flex items-center gap-3">
             <div className="flex-1 relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">calendar_month</span>
-              <input 
+              <input
                 className="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-body-base focus:ring-1 focus:ring-primary/20"
-                type="text"
+                type="date"
                 value={dateRange.start}
-                onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
               />
             </div>
             <span className="text-outline-variant">a</span>
             <div className="flex-1 relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">calendar_today</span>
-              <input 
+              <input
                 className="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-body-base focus:ring-1 focus:ring-primary/20"
                 placeholder="Hoy"
-                type="text"
+                type="date"
                 value={dateRange.end}
-                onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
               />
             </div>
           </div>
         </div>
         <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col gap-3">
           <label className="text-label-caps font-label-caps text-on-surface-variant">Tipo de Acción</label>
-          <select 
+          <select
             className="w-full bg-surface-container-low border-none rounded-lg text-body-base focus:ring-1 focus:ring-primary/20 py-2"
             value={actionType}
             onChange={(e) => {
@@ -273,7 +268,7 @@ export default function AuditsView() {
           <label className="text-label-caps font-label-caps text-on-surface-variant">ID Administrador</label>
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">person_search</span>
-            <input 
+            <input
               className="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-body-base focus:ring-1 focus:ring-primary/20"
               placeholder="Filtrar por ID..."
               type="number"
@@ -325,7 +320,12 @@ export default function AuditsView() {
                 </thead>
                 <tbody className="divide-y divide-outline-variant/10">
                   {auditLogs.map((log, idx) => (
-                    <AuditRow key={`${log.Id}-${currentPage}-${idx}`} log={log} adminUsers={adminUsers} />
+                    <AuditRow
+                      key={log.id ?? log.Id ?? `${log.executorId}-${log.entityName}-${log.timestamp}-${idx}`}
+                      log={log}
+                      adminUsers={adminUsers}
+                      onShowDetails={() => setSelectedLog(log)}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -334,17 +334,17 @@ export default function AuditsView() {
             {/* Pagination */}
             <div className="bg-surface-container-low px-6 py-4 flex items-center justify-between border-t border-outline-variant/20 flex-wrap gap-4">
               <span className="text-body-base text-on-surface-variant font-body-base">
-                Mostrando {auditLogs.length > 0 ? currentPage * pageSize + 1 : 0}-{(currentPage + 1) * pageSize} de {totalElements} registros
+                {`Mostrando ${startIndex}-${endIndex} de ${totalElements} registros`}
               </span>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   disabled={currentPage === 0}
                   onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
                   className="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                 </button>
-                
+
                 {Array.from({ length: Math.min(3, totalPages) }).map((_, idx) => (
                   <button
                     key={`page-${idx}`}
@@ -358,11 +358,11 @@ export default function AuditsView() {
                     {idx + 1}
                   </button>
                 ))}
-                
+
                 {totalPages > 3 && (
                   <>
                     <span className="px-2 text-outline-variant">...</span>
-                    <button 
+                    <button
                       key={`page-last-${totalPages}`}
                       onClick={() => setCurrentPage(totalPages - 1)}
                       className="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant transition-colors"
@@ -371,8 +371,8 @@ export default function AuditsView() {
                     </button>
                   </>
                 )}
-                
-                <button 
+
+                <button
                   disabled={currentPage === totalPages - 1}
                   onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
                   className="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -439,6 +439,29 @@ export default function AuditsView() {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
+
++      {/* Details modal */}
++      {selectedLog && (
++        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
++          <div className="bg-white dark:bg-surface-container-lowest w-11/12 md:w-2/3 lg:w-1/2 rounded-xl p-6 shadow-lg">
++            <div className="flex items-start justify-between">
++              <h3 className="text-lg font-body-semibold">Detalle de Auditoría</h3>
++              <button onClick={() => setSelectedLog(null)} className="text-on-surface-variant">Cerrar</button>
++            </div>
++            <div className="mt-4 space-y-3 text-body-base">
++              <div><strong>Fecha:</strong> {formatDateTime(selectedLog.timestamp)}</div>
++              <div><strong>Administrador (ID):</strong> {selectedLog.executorId}</div>
++              <div><strong>Acción:</strong> {selectedLog.action}</div>
++              <div><strong>Descripción:</strong> {selectedLog.description}</div>
++              <div><strong>Recurso:</strong> {selectedLog.entityName} #{selectedLog.entityId}</div>
++            </div>
++            <div className="mt-6 flex justify-end">
++              <button onClick={() => setSelectedLog(null)} className="px-4 py-2 bg-primary-container text-white rounded-lg">Cerrar</button>
++            </div>
++          </div>
++        </div>
++      )}
++
+     </div>
+   );
+ }
