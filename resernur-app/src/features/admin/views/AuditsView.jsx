@@ -440,28 +440,28 @@ export default function AuditsView() {
         </div>
       </div>
 
-+      {/* Details modal */}
-+      {selectedLog && (
-+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-+          <div className="bg-white dark:bg-surface-container-lowest w-11/12 md:w-2/3 lg:w-1/2 rounded-xl p-6 shadow-lg">
-+            <div className="flex items-start justify-between">
-+              <h3 className="text-lg font-body-semibold">Detalle de Auditoría</h3>
-+              <button onClick={() => setSelectedLog(null)} className="text-on-surface-variant">Cerrar</button>
-+            </div>
-+            <div className="mt-4 space-y-3 text-body-base">
-+              <div><strong>Fecha:</strong> {formatDateTime(selectedLog.timestamp)}</div>
-+              <div><strong>Administrador (ID):</strong> {selectedLog.executorId}</div>
-+              <div><strong>Acción:</strong> {selectedLog.action}</div>
-+              <div><strong>Descripción:</strong> {selectedLog.description}</div>
-+              <div><strong>Recurso:</strong> {selectedLog.entityName} #{selectedLog.entityId}</div>
-+            </div>
-+            <div className="mt-6 flex justify-end">
-+              <button onClick={() => setSelectedLog(null)} className="px-4 py-2 bg-primary-container text-white rounded-lg">Cerrar</button>
-+            </div>
-+          </div>
-+        </div>
-+      )}
-+
+      {/* Details modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-surface-container-lowest w-11/12 md:w-2/3 lg:w-1/2 rounded-xl p-6 shadow-lg">
+            <div className="flex items-start justify-between">
+              <h3 className="text-lg font-body-semibold">Detalle de Auditoría</h3>
+              <button onClick={() => setSelectedLog(null)} className="text-on-surface-variant">Cerrar</button>
+            </div>
+            <div className="mt-4 space-y-3 text-body-base">
+              <div><strong>Fecha:</strong> {formatDateTime(selectedLog.timestamp)}</div>
+              <div><strong>Administrador (ID):</strong> {selectedLog.executorId}</div>
+              <div><strong>Acción:</strong> {selectedLog.action}</div>
+              <div><strong>Descripción:</strong> {selectedLog.description}</div>
+              <div><strong>Recurso:</strong> {selectedLog.entityName} #{selectedLog.entityId}</div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button onClick={() => setSelectedLog(null)} className="px-4 py-2 bg-primary-container text-white rounded-lg">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
      </div>
    );
  }
