@@ -13,7 +13,7 @@ import com.resernur.api.repositories.bookings.BookingRepository;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
 import com.resernur.api.services.NotificationService;
 import com.resernur.api.utils.components.places.PlaceValidationComponent;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -139,8 +139,7 @@ public class PlaceService {
         var activeBookings = bookingRepository.findCompletedByPlaceIdAndEndTimeAfter(placeId, LocalDateTime.now());
         for(var booking : activeBookings){
             booking.setStatus(com.resernur.api.models.enums.BookingStatus.CANCELLED);
-            notificationService.createNotification(booking.
-                    getBookingRequest().getUser().getId(), "Debido a razones de mantenimiento, tu reserva para el lugar " + booking.getBookingRequest().getPlace().getName() + " ha sido cancelada.");
+            notificationService.createNotification(booking.getBookingRequest().getUser().getId(), "Debido a razones de mantenimiento, tu reserva para el lugar " + booking.getBookingRequest().getPlace().getName() + " ha sido cancelada.");
 
             bookingRepository.save(booking);
         }
@@ -155,7 +154,6 @@ public class PlaceService {
             notificationService.createNotification(request.getUser().getId(), message);
         }
     }
-
     // DTO MAPPING
     private PlaceDTO toDTO(Place place) {
         PlaceDTO dto = new PlaceDTO();

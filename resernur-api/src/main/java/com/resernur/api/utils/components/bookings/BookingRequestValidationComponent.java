@@ -44,6 +44,11 @@ public class BookingRequestValidationComponent {
 
     public void validateUserAndPlaceExistance(Optional<User> userOpt, Optional<Place> placeOpt) throws ResernurException {
         validateUserAndPlace(null, userOpt, placeOpt);
+        if(placeOpt.get().getStatus() != PlaceStatus.AVAILABLE){
+            throw new ResernurException("El lugar no está disponible para reservas");
+        }
+
+>>>>>>> origin/slave
     }
 
     public void validateBookingTimes(LocalDateTime requestCreatedTime,

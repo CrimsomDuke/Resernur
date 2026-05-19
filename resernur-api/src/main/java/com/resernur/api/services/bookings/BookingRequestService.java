@@ -203,11 +203,10 @@ public class BookingRequestService {
 
         validationComponent.validateUserIsInChargeOrAdmin(userId, req.getPlace(), userRepository);
 
-        //Mark place as RESERVED
+        // Mark place as RESERVED when a request is accepted
         Place place = req.getPlace();
         place.setStatus(PlaceStatus.RESERVED);
         placeRepository.save(place);
-
         // Mark accepted
         req.setStatus(BookingRequestStatus.ACCEPTED);
         bookingRequestRepository.save(req);
