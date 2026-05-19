@@ -9,13 +9,18 @@ import com.resernur.api.models.enums.PlaceStatus;
 import com.resernur.api.models.users.User;
 import com.resernur.api.repositories.places.PlaceRepository;
 import com.resernur.api.repositories.users.UserRepository;
+import com.resernur.api.repositories.bookings.BookingRepository;
+import com.resernur.api.repositories.bookings.BookingRequestRepository;
+import com.resernur.api.services.NotificationService;
 import com.resernur.api.utils.components.places.PlaceValidationComponent;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,6 +32,15 @@ public class PlaceService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private BookingRequestRepository bookingRequestRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Autowired
     private PlaceValidationComponent placeValidationComponent;
@@ -103,14 +117,43 @@ public class PlaceService {
         return new StandardResult<>(false, "Not found", null);
     }
 
+    @Transactional
     public StandardResult<PlaceDTO> changePlaceStatus(int id, PlaceStatus newStatus) {
         Optional<Place> place = placeRepository.findById(id);
         if(place.isEmpty()) return new StandardResult<>(false, "Not found", null);
+
         Place p = place.get();
         p.setStatus(newStatus);
+
+        if(p.getStatus() == PlaceStatus.UNDER_MAINTENANCE){
+            cancelRequestsForAPlace(id);
+            cancelPendingRequestsForAPlace(id, "Debido a razones de mantenimiento, tu solicitud de reserva para el lugar " + p.getName() + " ha sido rechazada.");
+        }
+
         Place saved = placeRepository.save(p);
 
         return new StandardResult<>(true, "", toDTO(saved));
+    }
+
+    public void cancelRequestsForAPlace(int placeId){
+        var activeBookings = bookingRepository.findCompletedByPlaceIdAndEndTimeAfter(placeId, LocalDateTime.now());
+        for(var booking : activeBookings){
+            booking.setStatus(com.resernur.api.models.enums.BookingStatus.CANCELLED);
+            notificationService.createNotification(booking.
+                    getBookingRequest().getUser().getId(), "Debido a razones de mantenimiento, tu reserva para el lugar " + booking.getBookingRequest().getPlace().getName() + " ha sido cancelada.");
+
+            bookingRepository.save(booking);
+        }
+    }
+
+    public void cancelPendingRequestsForAPlace(int placeId, String message){
+        var pendingRequests = bookingRequestRepository.findActiveRequestsByPlaceId(placeId);
+        for(var request : pendingRequests){
+            request.setStatus(com.resernur.api.models.enums.BookingRequestStatus.REJECTED);
+            request.setChangesRequestedReason(message);
+            bookingRequestRepository.save(request);
+            notificationService.createNotification(request.getUser().getId(), message);
+        }
     }
 
     // DTO MAPPING

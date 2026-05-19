@@ -31,7 +31,7 @@ public class Booking {
     private LocalDateTime endTime;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20)")
     private BookingStatus status = BookingStatus.COMPLETED;
 
     @Column

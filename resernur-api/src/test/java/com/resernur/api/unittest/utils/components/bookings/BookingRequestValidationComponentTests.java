@@ -46,20 +46,26 @@ public class BookingRequestValidationComponentTests {
 
     @Test
     public void validateUserAndPlaceExistance_success() {
-        assertDoesNotThrow(() -> validator.validateUserAndPlaceExistance(Optional.of(user), Optional.of(place)));
+        BookingRequestCreateDTO dto = new BookingRequestCreateDTO();
+        dto.setPlaceId(place.getId());
+        assertDoesNotThrow(() -> validator.validateUserAndPlace(dto, Optional.of(user), Optional.of(place)));
     }
 
     @Test
     public void validateUserAndPlaceExistance_userNotFound() {
+        BookingRequestCreateDTO dto = new BookingRequestCreateDTO();
+        dto.setPlaceId(place.getId());
         ResernurException ex = assertThrows(ResernurException.class, () ->
-                validator.validateUserAndPlaceExistance(Optional.empty(), Optional.of(place)));
+                validator.validateUserAndPlace(dto, Optional.empty(), Optional.of(place)));
         assertNotNull(ex);
     }
 
     @Test
     public void validateUserAndPlaceExistance_placeNotFound() {
+        BookingRequestCreateDTO dto = new BookingRequestCreateDTO();
+        dto.setPlaceId(place.getId());
         ResernurException ex = assertThrows(ResernurException.class, () ->
-                validator.validateUserAndPlaceExistance(Optional.of(user), Optional.empty()));
+                validator.validateUserAndPlace(dto, Optional.of(user), Optional.empty()));
         assertNotNull(ex);
     }
 
