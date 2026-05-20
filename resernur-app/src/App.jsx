@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import Login from './features/auth/Login'
 import TopNavBar from './components/TopNavBar'
 import SpaceExplorer from './features/visual_space_explorer/SpaceExplorer'
@@ -6,152 +7,143 @@ import BookingEngine from './features/space_booking_engine/BookingEngine'
 import AdminPanel from './features/admin/AdminPanel'
 import CalendarView from './features/calendar/CalendarView'
 import UserRequestsView from './features/user_requests/UserRequestsView'
+import ProtectedRoute from './components/ProtectedRoute'
+import { isAuthenticated, getRoleFromToken } from './utils/auth'
 
 const ADMIN_ROLE = 'ROLE_ADMINISTRADOR';
-
-function parseTokenPayload(token) {
-  if (!token) return null;
-
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-
-    const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=');
-    return JSON.parse(atob(padded));
-  } catch {
-    return null;
-  }
-}
-
-function isTokenExpired(payload) {
-  if (!payload?.exp) return false;
-  const nowInSeconds = Math.floor(Date.now() / 1000);
-  return payload.exp <= nowInSeconds;
-}
-
-function getRoleFromToken(token) {
-  const payload = parseTokenPayload(token);
-  return payload?.role || null;
-}
+const MANAGER_ROLE = 'ROLE_ENCARGADO';
 
 function getInitialViewByRole(role) {
-  return role === ADMIN_ROLE ? 'admin' : 'explorer';
+  return role === ADMIN_ROLE || role === MANAGER_ROLE ? '/admin' : '/espacios';
 }
 
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+// Layout wrapper to inject TopNavBar and handle global states
+function AppLayout() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [userRole, setUserRole] = useState(null);
-  const [currentView, setCurrentView] = useState("explorer"); // 'explorer' | 'bookingEngine' | 'admin'
   const [spaceToBook, setSpaceToBook] = useState(null);
   const [spaceToEdit, setSpaceToEdit] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('resernur_token');
-    if (!token) {
-      setIsAuthenticated(false);
-      setUserRole(null);
-      return;
+    if (token && isAuthenticated()) {
+      setUserRole(getRoleFromToken(token));
     }
-
-    const payload = parseTokenPayload(token);
-    if (!payload || isTokenExpired(payload)) {
-      localStorage.removeItem('resernur_token');
-      setIsAuthenticated(false);
-      setUserRole(null);
-      return;
-    }
-
-    const role = getRoleFromToken(token);
-    setIsAuthenticated(true);
-    setUserRole(role);
-    setCurrentView(getInitialViewByRole(role));
-  }, []);
-
-  const handleLoginSuccess = (token) => {
-    const role = getRoleFromToken(token);
-    setIsAuthenticated(true);
-    setUserRole(role);
-    setCurrentView(getInitialViewByRole(role));
-  };
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("resernur_token");
-    setIsAuthenticated(false);
     setUserRole(null);
-    setCurrentView('explorer');
     setSpaceToBook(null);
     setSpaceToEdit(null);
+    navigate('/login');
   };
 
   const handleNavigate = (view) => {
-    if (view === 'admin' && userRole !== ADMIN_ROLE) {
-      setCurrentView('explorer');
-      return;
-    }
-
-    setCurrentView(view);
+    if (view === 'explorer') navigate('/espacios');
+    else if (view === 'my-requests') navigate('/mis-reservas');
+    else if (view === 'calendar') navigate('/calendario');
+    else if (view === 'admin') navigate('/admin');
   };
 
   const handleReserveSpace = (space) => {
     setSpaceToBook(space);
-    setCurrentView("bookingEngine");
+    navigate('/reserva');
   };
 
   const handleEditSpace = (space) => {
     if (userRole !== ADMIN_ROLE) return;
     setSpaceToEdit(space);
-    setCurrentView('admin');
+    navigate('/admin');
   };
 
-  const handleEditHandled = () => {
-    setSpaceToEdit(null);
-  };
+  // Determinar la vista actual basada en la ruta para el TopNavBar
+  let currentViewStr = "explorer";
+  if (location.pathname.includes('/mis-reservas')) currentViewStr = "my-requests";
+  else if (location.pathname.includes('/calendario')) currentViewStr = "calendar";
+  else if (location.pathname.includes('/admin')) currentViewStr = "admin";
+  else if (location.pathname.includes('/reserva')) currentViewStr = "bookingEngine";
 
-  if (!isAuthenticated) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+  // Si estamos en /login, no mostramos el layout
+  if (location.pathname === '/login') {
+    return <Login onLoginSuccess={(token) => {
+      const role = getRoleFromToken(token);
+      setUserRole(role);
+      navigate(getInitialViewByRole(role));
+    }} />;
   }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       <TopNavBar 
-        currentView={currentView} 
+        currentView={currentViewStr} 
         onNavigate={handleNavigate} 
         onLogout={handleLogout} 
-        isAdmin={userRole === ADMIN_ROLE}
+        isAdmin={userRole === ADMIN_ROLE || userRole === MANAGER_ROLE}
+        isManager={userRole === MANAGER_ROLE}
       />
       
       <main style={{ padding: '2rem', paddingTop: '6rem' }}>
-        {currentView === "explorer" && (
-          <SpaceExplorer
-            onReserve={handleReserveSpace}
-            onAuthError={handleLogout}
-            isAdmin={userRole === ADMIN_ROLE}
-            onEditSpace={handleEditSpace}
-          />
-        )}
+        <Routes>
+          <Route path="/" element={<Navigate to="/espacios" replace />} />
+          
+          <Route path="/espacios" element={
+            <ProtectedRoute>
+              <SpaceExplorer
+                onReserve={handleReserveSpace}
+                onAuthError={handleLogout}
+                isAdmin={userRole === ADMIN_ROLE || userRole === MANAGER_ROLE}
+                onEditSpace={handleEditSpace}
+              />
+            </ProtectedRoute>
+          } />
 
-        {currentView === "bookingEngine" && (
-          <BookingEngine 
-            spaceToBook={spaceToBook} 
-            onGoBack={() => setCurrentView("explorer")} 
-          />
-        )}
+          <Route path="/reserva" element={
+            <ProtectedRoute>
+              <BookingEngine 
+                spaceToBook={spaceToBook} 
+                onGoBack={() => navigate('/espacios')} 
+              />
+            </ProtectedRoute>
+          } />
 
-        {currentView === "admin" && (
-          <AdminPanel editingSpace={spaceToEdit} onEditHandled={handleEditHandled} />
-        )}
+          <Route path="/admin" element={
+            <ProtectedRoute requireAdmin={true} userRole={userRole}>
+              <AdminPanel 
+                 editingSpace={spaceToEdit} 
+                 onEditHandled={() => setSpaceToEdit(null)}
+                 isManager={userRole === MANAGER_ROLE}
+              />
+            </ProtectedRoute>
+          } />
 
-        {currentView === "calendar" && (
-          <CalendarView onGoBack={() => setCurrentView("explorer")} />
-        )}
-        
-        {currentView === "my-requests" && (
-          <UserRequestsView onNavigate={handleNavigate} />
-        )}
+          <Route path="/calendario" element={
+            <ProtectedRoute>
+              <CalendarView onGoBack={() => navigate('/espacios')} />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/mis-reservas" element={
+            <ProtectedRoute>
+              <UserRequestsView onNavigate={handleNavigate} />
+            </ProtectedRoute>
+          } />
+
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/espacios" replace />} />
+        </Routes>
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+function App() {
+  return (
+    <BrowserRouter>
+      <AppLayout />
+    </BrowserRouter>
+  );
+}
+
+export default App;

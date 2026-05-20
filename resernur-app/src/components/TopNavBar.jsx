@@ -9,7 +9,7 @@ function authHeaders() {
     : {};
 }
 
-export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin = false }) {
+export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin = false, isManager = false }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -122,7 +122,7 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
                 className={`font-medium transition-colors cursor-pointer ${currentView === 'admin' ? 'text-blue-900 font-bold border-b-2 border-blue-900 pb-1' : 'text-slate-500 hover:text-blue-800'}`}
                 onClick={() => onNavigate("admin")}
               >
-                Administrador
+                {isManager ? 'Encargado' : 'Administrador'}
               </a>
             )}
           </div>

@@ -10,7 +10,7 @@ export default function AdminSidebar({ items, activeSection, onNavigate }) {
             <img src={logoNur} alt="NUR" className="h-9 w-9 rounded" />
             <div>
               <p className="font-headline text-lg leading-tight font-bold">ReserNur</p>
-              <p className="font-label text-[10px] uppercase tracking-widest text-white/80">Panel Administrativo</p>
+              <p className="font-label text-[10px] uppercase tracking-widest text-white/80">Panel de Gestión</p>
             </div>
           </div>
         </div>

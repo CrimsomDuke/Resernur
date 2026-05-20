@@ -12,10 +12,7 @@ const INITIAL_FORM = {
   description: '',
   capacity: '',
   location: '',
-  userInChargeId: '',
-  hasProjector: false,
-  hasWifi: true,
-  hasAirConditioning: false
+  userInChargeId: ''
 };
 
 export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved, onCancelEdit }) {
@@ -29,6 +26,12 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
   const [encargados, setEncargados] = useState([]);
   const [isLoadingEncargados, setIsLoadingEncargados] = useState(true);
   const [encargadosError, setEncargadosError] = useState('');
+
+  // Estados para equipamiento dinámico
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [deletedEquipmentIds, setDeletedEquipmentIds] = useState([]);
+  const [newEqName, setNewEqName] = useState("");
+  const [newEqQty, setNewEqQty] = useState(1);
 
   const isEditMode = Number(editingSpace?.id) > 0;
 
@@ -48,22 +51,41 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
   useEffect(() => {
     if (!isEditMode) {
       setForm(INITIAL_FORM);
+      setEquipmentList([]);
+      setDeletedEquipmentIds([]);
       return;
     }
 
-    setForm((prev) => ({
-      ...prev,
+    setForm({
       name: editingSpace?.name || '',
       description: editingSpace?.description || '',
       capacity: editingSpace?.capacity ? String(editingSpace.capacity) : '',
       userInChargeId: editingSpace?.userInChargeId ? String(editingSpace.userInChargeId) : '',
       location: editingSpace?.location || ''
-    }));
+    });
 
     setSelectedImageFiles([]);
     setSuccessMsg('');
     setErrorMsg('');
     setPhotoHint('');
+
+    // Fetch existing equipment for this space
+    const fetchEq = async () => {
+      try {
+        const token = localStorage.getItem('resernur_token');
+        const res = await fetch(`http://localhost:5000/api/places/${editingSpace.id}/equipment?pageSize=50`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setEquipmentList(data.content || []);
+        }
+      } catch (e) {
+        console.error("Error cargando equipo", e);
+      }
+    };
+    fetchEq();
+    setDeletedEquipmentIds([]);
   }, [editingSpace, isEditMode]);
 
   useEffect(() => {
@@ -134,11 +156,6 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const onCheckChange = (field) => (event) => {
-    const value = event.target.checked;
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
   const onSelectPhoto = (event) => {
     const files = Array.from(event.target.files || []);
     setSelectedImageFiles(files);
@@ -150,6 +167,34 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
     } else {
       setPhotoHint('');
     }
+  };
+
+  const handleAddEquipment = (e) => {
+    e.preventDefault();
+    if (!newEqName.trim() || newEqQty < 1) return;
+    setEquipmentList(prev => [...prev, { id: `temp-${Date.now()}`, equipmentName: newEqName.trim(), quantity: newEqQty, status: 'AVAILABLE', isNew: true }]);
+    setNewEqName("");
+    setNewEqQty(1);
+  };
+
+  const handleRemoveEquipment = (idToRemove) => {
+    setEquipmentList(prev => {
+      const item = prev.find(i => i.id === idToRemove);
+      if (item && !item.isNew) {
+        setDeletedEquipmentIds(d => [...d, item.id]);
+      }
+      return prev.filter(i => i.id !== idToRemove);
+    });
+  };
+
+  const handleUpdateQty = (idToUpdate, delta) => {
+    setEquipmentList(prev => prev.map(item => {
+      if (item.id === idToUpdate) {
+        const newQ = item.quantity + delta;
+        if (newQ > 0) return { ...item, quantity: newQ, isModified: !item.isNew };
+      }
+      return item;
+    }));
   };
 
   const handleSubmit = async (event) => {
@@ -221,6 +266,40 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
         throw new Error(backendMessage);
       }
 
+      const spaceId = result.id;
+
+      // Sincronizar Equipamiento
+      try {
+        // 1. Borrar eliminados
+        for (const dId of deletedEquipmentIds) {
+          await fetch(`http://localhost:5000/api/equipment/${dId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+        }
+        // 2. Añadir nuevos
+        const newItems = equipmentList.filter(eq => eq.isNew);
+        for (const nEq of newItems) {
+          await fetch(`http://localhost:5000/api/places/${spaceId}/equipment`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ equipmentName: nEq.equipmentName, quantity: nEq.quantity, status: 'AVAILABLE' })
+          });
+        }
+        // 3. Actualizar modificados
+        const modItems = equipmentList.filter(eq => eq.isModified);
+        for (const mEq of modItems) {
+           await fetch(`http://localhost:5000/api/equipment/${mEq.id}/quantity`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quantity: mEq.quantity })
+          });
+        }
+      } catch (err) {
+        console.error("Error sincronizando equipamiento:", err);
+      }
+
+      // Sincronizar Fotos
       let uploadedImageUrls = [];
       if (selectedImageFiles.length > 0) {
         const formData = new FormData();
@@ -228,7 +307,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
           formData.append('images', file);
         });
 
-        const imageUploadResponse = await fetch(`http://localhost:5000/api/places/${result.id}/images`, {
+        const imageUploadResponse = await fetch(`http://localhost:5000/api/places/${spaceId}/images`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`
@@ -257,11 +336,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
       capacity: result.capacity,
       image: uploadedImageUrls[0] || finalImage,
       images: uploadedImageUrls.length > 0 ? uploadedImageUrls : [finalImage],
-      equipment: [
-        form.hasProjector ? 'Proyector' : null,
-        form.hasWifi ? 'Wi-Fi' : null,
-        form.hasAirConditioning ? 'Aire acondicionado' : null
-      ].filter(Boolean)
+      equipment: equipmentList.map(eq => `${eq.equipmentName} (x${eq.quantity})`)
     };
 
       setCreatedSpaces((prev) => {
@@ -272,7 +347,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
       });
       localStorage.removeItem(LOCAL_SPACES_STORAGE_KEY);
 
-      setSuccessMsg(isEditMode ? 'Espacio actualizado con exito.' : 'Espacio creado con exito.');
+      setSuccessMsg(isEditMode ? 'Espacio y equipamiento actualizados con exito.' : 'Espacio creado con exito.');
 
       if (isEditMode) {
         if (typeof onEditSaved === 'function') {
@@ -281,6 +356,8 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
       } else {
         setForm(INITIAL_FORM);
         setSelectedImageFiles([]);
+        setEquipmentList([]);
+        setDeletedEquipmentIds([]);
       }
     } catch (error) {
       setErrorMsg(error.message || 'No se pudo guardar el espacio.');
@@ -298,8 +375,8 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
         </h2>
         <p className="text-on-surface-variant mt-2">
           {isEditMode
-            ? 'Actualiza los datos del espacio seleccionado y guarda los cambios.'
-            : 'Formulario conectado al backend con seleccion obligatoria de encargado.'}
+            ? 'Actualiza los datos del espacio y su equipamiento, luego guarda los cambios.'
+            : 'Añade la información general y construye el inventario de equipamiento de este nuevo espacio.'}
         </p>
         {isEditMode && (
           <div className="mt-3 inline-flex items-center gap-2 rounded-md bg-secondary-container px-3 py-2 text-sm text-primary font-semibold">
@@ -401,6 +478,60 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
               />
             </label>
 
+            <fieldset>
+              <legend className="text-xs uppercase tracking-widest font-bold text-on-surface-variant mb-3">Inventario del Espacio</legend>
+              <div className="bg-surface-container-low border border-surface-container-high rounded-xl p-4">
+                
+                <div className="flex gap-2 mb-4">
+                  <input 
+                    type="text" 
+                    value={newEqName}
+                    onChange={e => setNewEqName(e.target.value)}
+                    placeholder="Nombre del equipo (Ej. Proyector)"
+                    className="flex-1 rounded-lg border border-outline-variant px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  />
+                  <input 
+                    type="number" 
+                    min="1"
+                    value={newEqQty}
+                    onChange={e => setNewEqQty(parseInt(e.target.value) || 1)}
+                    className="w-16 rounded-lg border border-outline-variant px-2 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none text-center"
+                  />
+                  <button 
+                    type="button"
+                    onClick={handleAddEquipment}
+                    disabled={!newEqName.trim()}
+                    className="bg-secondary-container text-primary font-bold px-4 py-2 rounded-lg text-sm hover:bg-secondary-container/80 disabled:opacity-50"
+                  >
+                    Añadir
+                  </button>
+                </div>
+
+                <div className="max-h-40 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                  {equipmentList.length === 0 ? (
+                    <p className="text-xs text-on-surface-variant text-center py-2 italic">Sin equipamiento asignado.</p>
+                  ) : (
+                    equipmentList.map(eq => (
+                      <div key={eq.id} className="flex items-center justify-between bg-white border border-outline-variant rounded-lg p-2">
+                        <span className="text-sm font-medium text-on-surface flex-1">{eq.equipmentName}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center bg-surface-container-lowest rounded-md border border-outline-variant">
+                            <button type="button" onClick={() => handleUpdateQty(eq.id, -1)} className="w-6 h-6 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low rounded-l-md">-</button>
+                            <span className="text-xs font-bold w-6 text-center">{eq.quantity}</span>
+                            <button type="button" onClick={() => handleUpdateQty(eq.id, 1)} className="w-6 h-6 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low rounded-r-md">+</button>
+                          </div>
+                          <button type="button" onClick={() => handleRemoveEquipment(eq.id)} className="text-error hover:text-error/80">
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+              </div>
+            </fieldset>
+
             <label className="block">
               <span className="text-xs uppercase tracking-widest font-bold text-on-surface-variant">Fotos del espacio</span>
               <input
@@ -420,24 +551,6 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
                 {photoHint}
               </div>
             )}
-
-            <fieldset>
-              <legend className="text-xs uppercase tracking-widest font-bold text-on-surface-variant mb-3">Equipamiento base</legend>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label className="flex items-center gap-2 bg-surface-container-low rounded-lg px-3 py-2 border border-surface-container-high">
-                  <input type="checkbox" checked={form.hasProjector} onChange={onCheckChange('hasProjector')} />
-                  <span className="text-sm">Proyector</span>
-                </label>
-                <label className="flex items-center gap-2 bg-surface-container-low rounded-lg px-3 py-2 border border-surface-container-high">
-                  <input type="checkbox" checked={form.hasWifi} onChange={onCheckChange('hasWifi')} />
-                  <span className="text-sm">Wi-Fi</span>
-                </label>
-                <label className="flex items-center gap-2 bg-surface-container-low rounded-lg px-3 py-2 border border-surface-container-high">
-                  <input type="checkbox" checked={form.hasAirConditioning} onChange={onCheckChange('hasAirConditioning')} />
-                  <span className="text-sm">Aire acondicionado</span>
-                </label>
-              </div>
-            </fieldset>
 
             <div className="pt-4 border-t border-surface-container-high flex justify-end">
               {isEditMode && (
@@ -488,7 +601,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
                     Encargado: {space.userInChargeName || encargadosById[space.userInChargeId] || `ID ${space.userInChargeId}`}
                   </p>
                 )}
-                {space.equipment.length > 0 && (
+                {space.equipment && space.equipment.length > 0 && (
                   <p className="text-xs text-on-surface-variant mt-2">Equipamiento: {space.equipment.join(', ')}</p>
                 )}
               </article>

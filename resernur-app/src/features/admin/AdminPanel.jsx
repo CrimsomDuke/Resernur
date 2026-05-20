@@ -8,7 +8,7 @@ import AdminBookingsView from './views/AdminBookingsView';
 import AdminAnalyticsView from './views/AdminAnalyticsView';
 import UserManagementView from './views/UserManagementView';
 
-const MENU_ITEMS = [
+const ALL_MENU_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
   { key: 'requests', label: 'Solicitudes', icon: 'pending_actions' },
   { key: 'reservations', label: 'Reservas', icon: 'event_seat' },
@@ -18,8 +18,16 @@ const MENU_ITEMS = [
   { key: 'analytics', label: 'Analitica', icon: 'insights' }
 ];
 
-export default function AdminPanel({ editingSpace = null, onEditHandled }) {
+export default function AdminPanel({ editingSpace = null, onEditHandled, isManager = false }) {
   const [activeSection, setActiveSection] = useState('dashboard');
+  
+  // Filter menu items for manager (ROLE_ENCARGADO)
+  const menuItems = useMemo(() => {
+    if (!isManager) return ALL_MENU_ITEMS;
+    return ALL_MENU_ITEMS.filter(item => 
+      ['dashboard', 'requests', 'reservations', 'resources'].includes(item.key)
+    );
+  }, [isManager]);
 
   useEffect(() => {
     if (editingSpace?.id) {
@@ -28,8 +36,8 @@ export default function AdminPanel({ editingSpace = null, onEditHandled }) {
   }, [editingSpace]);
 
   const currentTitle = useMemo(() => {
-    return MENU_ITEMS.find((item) => item.key === activeSection)?.label || 'Administrador';
-  }, [activeSection]);
+    return menuItems.find((item) => item.key === activeSection)?.label || (isManager ? 'Encargado' : 'Administrador');
+  }, [activeSection, menuItems, isManager]);
 
   const renderSection = () => {
     if (activeSection === 'dashboard') {
@@ -76,7 +84,7 @@ export default function AdminPanel({ editingSpace = null, onEditHandled }) {
     <div className="min-h-[calc(100vh-6rem)] bg-background rounded-2xl overflow-hidden border border-surface-container-high">
       <div className="flex h-full">
         <AdminSidebar
-          items={MENU_ITEMS}
+          items={menuItems}
           activeSection={activeSection}
           onNavigate={setActiveSection}
         />
