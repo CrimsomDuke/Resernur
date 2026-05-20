@@ -12,7 +12,11 @@ import org.mockito.Mockito;
 import org.mockito.internal.verification.Times;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
+import java.time.Month;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +41,7 @@ public class LogServiceTests {
         int entityId = 1;
 
         when(auditLogRepository.save(any(AuditLog.class)))
-                .thenReturn(any(AuditLog.class));
+            .thenReturn(new AuditLog());
 
         //act
         logService.logAction(action, desc, executorId, entityName, entityId);
@@ -86,7 +90,7 @@ public class LogServiceTests {
         int entityId = 2;
 
         when(auditLogRepository.save(any(AuditLog.class)))
-                .thenReturn(any(AuditLog.class));
+            .thenReturn(new AuditLog());
 
         //act
         logService.logAction(action, executorId, entityName, entityId);
@@ -104,15 +108,17 @@ public class LogServiceTests {
         Actions action = Actions.READ;
         int page = 0;
         int pageSize = 10;
+        LocalDateTime startDate = LocalDateTime.of(2026, Month.MAY, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2026, Month.MAY, 19, 23, 59, 59);
 
-        when(auditLogRepository.findForSearch(executorId, entityName, entityId, action, org.springframework.data.domain.PageRequest.of(page, pageSize)))
+        when(auditLogRepository.findForSearch(executorId, entityName, entityId, action, startDate, endDate, org.springframework.data.domain.PageRequest.of(page, pageSize)))
                 .thenReturn(org.springframework.data.domain.Page.empty());
 
         //act
-        logService.searchLogs(executorId, entityName, entityId, action, page, pageSize);
+        logService.searchLogs(executorId, entityName, entityId, action, startDate, endDate, page, pageSize);
 
         //assert
-        Mockito.verify(auditLogRepository, times(1)).findForSearch(executorId, entityName, entityId, action, org.springframework.data.domain.PageRequest.of(page, pageSize));
+        Mockito.verify(auditLogRepository, times(1)).findForSearch(executorId, entityName, entityId, action, startDate, endDate, org.springframework.data.domain.PageRequest.of(page, pageSize));
     }
 
 }

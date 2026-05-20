@@ -142,11 +142,11 @@ public class BookingRequestServiceTests {
         assertNotNull(result.getData());
         assertEquals(bookingRequest.getId(), result.getData().getId());
 
-        verify(bookingRequestValidationComponent, times(1)).validateUserAndPlace(dto, any(), any());
+        verify(bookingRequestValidationComponent, times(1)).validateUserAndPlace(eq(dto), any(), any());
         verify(bookingRequestValidationComponent, times(1)).validateBookingTimes(any(), eq(startTime), eq(endTime), eq(configurationProvider));
         verify(bookingRequestValidationComponent, times(1)).validateOverlappingOnCreate(eq(dto), eq(bookingRequestRepository));
         verify(bookingRequestRepository, times(1)).save(any(BookingRequest.class));
-        verify(notificationService, times(1)).createNotification(eq(user.getId()), eq("Your booking request has been created and is pending review"));
+        verify(notificationService, times(1)).createNotification(eq(user.getId()), eq("Tu solicitud de reserva fue enviada y esta pendiente de revision"));
         verify(logService, times(1)).logAction(eq(Actions.CREATE), eq(user.getId().intValue()), eq("BOOKING_REQUEST"), eq(bookingRequest.getId()));
     }
 

@@ -51,9 +51,23 @@ const formatDateTime = (timestamp) => {
   });
 };
 
+const getAdminDisplayName = (adminUser, executorId) => {
+  return (
+    adminUser?.fullName ||
+    adminUser?.name ||
+    adminUser?.username ||
+    adminUser?.email ||
+    `Administrador ${executorId}`
+  );
+};
+
+const getAdminUserById = (adminUsers, executorId) => {
+  return adminUsers.find((user) => Number(user.id) === Number(executorId));
+};
+
 const AuditRow = ({ log, adminUsers, onShowDetails }) => {
-  const adminUser = adminUsers.find((u) => u.id === log.executorId);
-  const adminName = adminUser?.name || `Admin ${log.executorId}`;
+  const adminUser = getAdminUserById(adminUsers, log.executorId);
+  const adminName = getAdminDisplayName(adminUser, log.executorId);
   const resourceIcon = getResourceIcon(log.entityName);
   const actionColor = getActionColor(log.action);
   const dateTime = formatDateTime(log.timestamp);
@@ -92,7 +106,13 @@ const AuditRow = ({ log, adminUsers, onShowDetails }) => {
         </div>
       </td>
       <td className="px-6 py-4 align-middle text-right">
-        <button onClick={() => onShowDetails && onShowDetails()} className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors" title={`Detalles: ${log.description}`}>
+        <button
+          type="button"
+          onClick={() => onShowDetails && onShowDetails(log)}
+          className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
+          title={`Detalles: ${log.description || log.action}`}
+          aria-label={`Ver detalles del registro ${log.Id ?? log.id ?? ''}`}
+        >
           <span className="material-symbols-outlined text-[20px]">visibility</span>
         </button>
       </td>
@@ -107,6 +127,7 @@ export default function AuditsView() {
   const [adminFilter, setAdminFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [auditLogs, setAuditLogs] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
@@ -114,6 +135,14 @@ export default function AuditsView() {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const handleShowDetails = (log) => {
+    setSelectedLog(log);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedLog(null);
+  };
 
   // Función para obtener los logs del backend
   useEffect(() => {
@@ -166,7 +195,7 @@ export default function AuditsView() {
     };
 
     fetchAuditLogs();
-  }, [currentPage, pageSize, actionType, adminFilter, dateRange]);
+  }, [currentPage, pageSize, actionType, adminFilter, dateRange, refreshKey]);
 
   // Obtener lista de usuarios administradores
   useEffect(() => {
@@ -195,8 +224,87 @@ export default function AuditsView() {
     fetchAdminUsers();
   }, []);
 
-  const startIndex = auditLogs.length > 0 ? currentPage * pageSize + 1 : 0;
-  const endIndex = Math.min((currentPage + 1) * pageSize, totalElements);
+  const startIndex = totalElements > 0 ? currentPage * pageSize + 1 : 0;
+  const endIndex = Math.min(currentPage * pageSize + auditLogs.length, totalElements);
+
+  // Calcular estadísticas de acciones dinámicamente
+  const calculateActionStats = () => {
+    if (auditLogs.length === 0) {
+      return {
+        CREATE: { count: 0, percentage: 0 },
+        READ: { count: 0, percentage: 0 },
+        UPDATE: { count: 0, percentage: 0 },
+        DELETE: { count: 0, percentage: 0 },
+        APPROVE: { count: 0, percentage: 0 },
+        REJECT: { count: 0, percentage: 0 }
+      };
+    }
+
+    const stats = {
+      CREATE: { count: 0, percentage: 0 },
+      READ: { count: 0, percentage: 0 },
+      UPDATE: { count: 0, percentage: 0 },
+      DELETE: { count: 0, percentage: 0 },
+      APPROVE: { count: 0, percentage: 0 },
+      REJECT: { count: 0, percentage: 0 }
+    };
+
+    // Contar ocurrencias de cada acción en la página actual
+    auditLogs.forEach((log) => {
+      if (stats[log.action]) {
+        stats[log.action].count += 1;
+      }
+    });
+
+    // Calcular porcentajes
+    const total = auditLogs.length;
+    Object.keys(stats).forEach((action) => {
+      stats[action].percentage = Math.round((stats[action].count / total) * 100);
+    });
+
+    return stats;
+  };
+
+  const actionStats = calculateActionStats();
+
+  // Obtener las 2 acciones más frecuentes para mostrar
+  const topActions = Object.entries(actionStats)
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 2)
+    .filter((item) => item[1].count > 0);
+
+  const getPaginationItems = () => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index);
+    }
+
+    const items = [0];
+    let start = Math.max(1, currentPage - 1);
+    let end = Math.min(totalPages - 2, currentPage + 1);
+
+    if (currentPage <= 2) {
+      start = 1;
+      end = 3;
+    } else if (currentPage >= totalPages - 3) {
+      start = totalPages - 4;
+      end = totalPages - 2;
+    }
+
+    if (start > 1) {
+      items.push('ellipsis-start');
+    }
+
+    for (let page = start; page <= end; page += 1) {
+      items.push(page);
+    }
+
+    if (end < totalPages - 2) {
+      items.push('ellipsis-end');
+    }
+
+    items.push(totalPages - 1);
+    return items;
+  };
 
   return (
     <div className="space-y-8">
@@ -209,7 +317,7 @@ export default function AuditsView() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => setRefreshKey((value) => value + 1)}
             className="px-5 py-2.5 bg-surface-container-high text-primary font-body-semibold rounded-xl flex items-center gap-2 hover:bg-surface-variant transition-colors shadow-sm"
           >
             <span className="material-symbols-outlined text-[20px]">refresh</span>
@@ -221,15 +329,18 @@ export default function AuditsView() {
       {/* Bento Filter Bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="md:col-span-2 bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col gap-3">
-          <label className="text-label-caps font-label-caps text-on-surface-variant">Rango de Fechas</label>
+          <label className="text-label-caps font-label-caps text-on-surface-variant">Rango de Fecha y Hora</label>
           <div className="flex items-center gap-3">
             <div className="flex-1 relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">calendar_month</span>
               <input
                 className="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-body-base focus:ring-1 focus:ring-primary/20"
-                type="date"
+                type="datetime-local"
                 value={dateRange.start}
-                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                onChange={(e) => {
+                  setDateRange({ ...dateRange, start: e.target.value });
+                  setCurrentPage(0);
+                }}
               />
             </div>
             <span className="text-outline-variant">a</span>
@@ -237,10 +348,12 @@ export default function AuditsView() {
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">calendar_today</span>
               <input
                 className="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-body-base focus:ring-1 focus:ring-primary/20"
-                placeholder="Hoy"
-                type="date"
+                type="datetime-local"
                 value={dateRange.end}
-                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                onChange={(e) => {
+                  setDateRange({ ...dateRange, end: e.target.value });
+                  setCurrentPage(0);
+                }}
               />
             </div>
           </div>
@@ -324,7 +437,7 @@ export default function AuditsView() {
                       key={log.id ?? log.Id ?? `${log.executorId}-${log.entityName}-${log.timestamp}-${idx}`}
                       log={log}
                       adminUsers={adminUsers}
-                      onShowDetails={() => setSelectedLog(log)}
+                      onShowDetails={handleShowDetails}
                     />
                   ))}
                 </tbody>
@@ -345,32 +458,29 @@ export default function AuditsView() {
                   <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                 </button>
 
-                {Array.from({ length: Math.min(3, totalPages) }).map((_, idx) => (
-                  <button
-                    key={`page-${idx}`}
-                    onClick={() => setCurrentPage(idx)}
-                    className={`w-8 h-8 flex items-center justify-center rounded-lg font-body-semibold ${
-                      currentPage === idx
-                        ? 'bg-primary-container text-white shadow-sm'
-                        : 'border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant'
-                    }`}
-                  >
-                    {idx + 1}
-                  </button>
-                ))}
+                {getPaginationItems().map((item) => {
+                  if (typeof item === 'string') {
+                    return (
+                      <span key={item} className="px-2 text-outline-variant">
+                        ...
+                      </span>
+                    );
+                  }
 
-                {totalPages > 3 && (
-                  <>
-                    <span className="px-2 text-outline-variant">...</span>
+                  return (
                     <button
-                      key={`page-last-${totalPages}`}
-                      onClick={() => setCurrentPage(totalPages - 1)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant transition-colors"
+                      key={`page-${item}`}
+                      onClick={() => setCurrentPage(item)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg font-body-semibold ${
+                        currentPage === item
+                          ? 'bg-primary-container text-white shadow-sm'
+                          : 'border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant'
+                      }`}
                     >
-                      {totalPages}
+                      {item + 1}
                     </button>
-                  </>
-                )}
+                  );
+                })}
 
                 <button
                   disabled={currentPage === totalPages - 1}
@@ -400,63 +510,143 @@ export default function AuditsView() {
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant/30 p-6 rounded-xl shadow-sm">
           <span className="text-label-caps text-on-surface-variant tracking-widest">ACCIONES POR TIPO</span>
-          <div className="space-y-4 mt-6">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-body-base">Modificaciones (UPDATE)</span>
-                <span className="font-body-semibold text-primary">45%</span>
-              </div>
-              <div className="w-full h-2 bg-surface-container-low rounded-full overflow-hidden">
-                <div className="h-full bg-primary" style={{ width: '45%' }}></div>
-              </div>
+          {auditLogs.length === 0 ? (
+            <div className="mt-6 text-center text-on-surface-variant">
+              <p className="text-body-base">No hay datos para mostrar</p>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-body-base">Creaciones (CREATE)</span>
-                <span className="font-body-semibold text-primary">30%</span>
-              </div>
-              <div className="w-full h-2 bg-surface-container-low rounded-full overflow-hidden">
-                <div className="h-full bg-secondary" style={{ width: '30%' }}></div>
-              </div>
+          ) : (
+            <div className="space-y-4 mt-6">
+              {topActions.map(([action, stats]) => {
+                const actionColors = {
+                  CREATE: 'bg-emerald-500',
+                  READ: 'bg-blue-500',
+                  UPDATE: 'bg-orange-500',
+                  DELETE: 'bg-red-500',
+                  APPROVE: 'bg-green-500',
+                  REJECT: 'bg-red-500'
+                };
+
+                const actionLabels = {
+                  CREATE: 'Creaciones',
+                  READ: 'Lecturas',
+                  UPDATE: 'Modificaciones',
+                  DELETE: 'Eliminaciones',
+                  APPROVE: 'Aprobaciones',
+                  REJECT: 'Rechazos'
+                };
+
+                return (
+                  <div key={action}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-body-base">
+                        {actionLabels[action]} ({action})
+                      </span>
+                      <span className="font-body-semibold text-primary">{stats.percentage}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-surface-container-low rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${actionColors[action]}`}
+                        style={{ width: `${stats.percentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        </div>
-        <div className="bg-surface-container-lowest border border-outline-variant/30 p-6 rounded-xl shadow-sm flex flex-col justify-between">
-          <div>
-            <span className="text-label-caps text-on-surface-variant tracking-widest">INFORMACIÓN DEL SISTEMA</span>
-            <div className="flex items-center gap-3 mt-4">
-              <div className="w-10 h-10 rounded-lg bg-error-container flex items-center justify-center text-on-error-container">
-                <span className="material-symbols-outlined">info</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-body-semibold font-body-semibold">Auditoria Activa</span>
-                <span className="text-caption-micro text-on-surface-variant">Sistema conectado a BD</span>
-              </div>
-            </div>
-          </div>
-          <button className="mt-4 w-full py-2 bg-surface-container-high text-primary font-body-semibold rounded-lg hover:bg-surface-variant transition-colors border border-outline-variant/30">
-            Ver Más Estadísticas
-          </button>
+          )}
         </div>
       </div>
 
       {/* Details modal */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white dark:bg-surface-container-lowest w-11/12 md:w-2/3 lg:w-1/2 rounded-xl p-6 shadow-lg">
-            <div className="flex items-start justify-between">
-              <h3 className="text-lg font-body-semibold">Detalle de Auditoría</h3>
-              <button onClick={() => setSelectedLog(null)} className="text-on-surface-variant">Cerrar</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 px-4 py-6 backdrop-blur-sm">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            onClick={handleCloseDetails}
+            aria-label="Cerrar detalle de auditoría"
+          />
+          <div className="relative z-10 w-full max-w-4xl overflow-hidden border border-outline-variant/20 bg-surface-container-lowest shadow-2xl">
+            <div className="bg-gradient-to-r from-primary to-secondary px-6 py-5 text-white">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-label-caps font-label-caps tracking-[0.22em] opacity-80">Detalle completo</p>
+                  <h3 className="mt-1 text-2xl font-display-xl">Registro de auditoría</h3>
+                  <p className="mt-2 max-w-2xl text-sm text-white/85">Consulta el evento, el autor y el payload completo sin salir de la vista.</p>
+                </div>
+                <div className="flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-sm font-body-semibold backdrop-blur">
+                  <span className="material-symbols-outlined text-[18px]">verified</span>
+                  <span>{selectedLog.action}</span>
+                </div>
+              </div>
             </div>
-            <div className="mt-4 space-y-3 text-body-base">
-              <div><strong>Fecha:</strong> {formatDateTime(selectedLog.timestamp)}</div>
-              <div><strong>Administrador (ID):</strong> {selectedLog.executorId}</div>
-              <div><strong>Acción:</strong> {selectedLog.action}</div>
-              <div><strong>Descripción:</strong> {selectedLog.description}</div>
-              <div><strong>Recurso:</strong> {selectedLog.entityName} #{selectedLog.entityId}</div>
+
+            <div className="px-6 py-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <span className="material-symbols-outlined text-[24px]">fact_check</span>
+                  </div>
+                  <div>
+                    <p className="text-label-caps font-label-caps text-on-surface-variant">Evento</p>
+                    <h4 className="text-xl font-body-semibold text-on-surface">{selectedLog.entityName} #{selectedLog.entityId}</h4>
+                    <p className="text-sm text-on-surface-variant">ID del registro: {selectedLog.Id ?? selectedLog.id ?? 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-4 shadow-sm">
+                <span className="text-label-caps font-label-caps text-on-surface-variant">Fecha y hora</span>
+                <div className="mt-2 text-lg font-body-semibold text-primary">{formatDateTime(selectedLog.timestamp)}</div>
+                <div className="mt-1 text-caption-micro text-on-surface-variant">{selectedLog.timestamp || 'N/A'}</div>
+              </div>
+              <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-4 shadow-sm">
+                <span className="text-label-caps font-label-caps text-on-surface-variant">Administrador</span>
+                <div className="mt-3 flex items-center gap-3">
+                  <img
+                    className="h-12 w-12 rounded-full border border-outline-variant/50"
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${getAdminDisplayName(getAdminUserById(adminUsers, selectedLog.executorId), selectedLog.executorId)}`}
+                    alt={getAdminDisplayName(getAdminUserById(adminUsers, selectedLog.executorId), selectedLog.executorId)}
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate text-lg font-body-semibold text-on-surface">
+                      {getAdminDisplayName(getAdminUserById(adminUsers, selectedLog.executorId), selectedLog.executorId)}
+                    </div>
+                    <div className="text-caption-micro text-on-surface-variant">ID: {selectedLog.executorId}</div>
+                    <div className="mt-1 text-caption-micro text-on-surface-variant">Cuenta vinculada al usuario del sistema</div>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-4 shadow-sm">
+                <span className="text-label-caps font-label-caps text-on-surface-variant">Acción</span>
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-secondary-container/30 px-3 py-1 text-on-secondary-container w-fit">
+                  <span className={`h-2 w-2 rounded-full ${getActionColor(selectedLog.action)}`}></span>
+                  <span className="font-body-semibold">{selectedLog.action}</span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-4 shadow-sm">
+                <span className="text-label-caps font-label-caps text-on-surface-variant">Recurso afectado</span>
+                <div className="mt-2 text-lg font-body-semibold text-primary">{selectedLog.entityName} #{selectedLog.entityId}</div>
+                <div className="mt-1 text-caption-micro text-on-surface-variant">ID del registro: {selectedLog.Id ?? selectedLog.id ?? 'N/A'}</div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low p-4 shadow-sm">
+              <span className="text-label-caps font-label-caps text-on-surface-variant">Descripción</span>
+              <p className="mt-2 text-body-base leading-7 text-on-surface">{selectedLog.description || 'Sin descripción registrada.'}</p>
+            </div>
+
             <div className="mt-6 flex justify-end">
-              <button onClick={() => setSelectedLog(null)} className="px-4 py-2 bg-primary-container text-white rounded-lg">Cerrar</button>
+              <button
+                type="button"
+                onClick={handleCloseDetails}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 font-body-semibold text-white transition-opacity hover:opacity-90"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+                Cerrar
+              </button>
             </div>
           </div>
         </div>

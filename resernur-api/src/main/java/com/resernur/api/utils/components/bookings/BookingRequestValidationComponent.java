@@ -48,7 +48,6 @@ public class BookingRequestValidationComponent {
             throw new ResernurException("El lugar no está disponible para reservas");
         }
 
->>>>>>> origin/slave
     }
 
     public void validateBookingTimes(LocalDateTime requestCreatedTime,
