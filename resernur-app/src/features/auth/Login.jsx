@@ -27,7 +27,7 @@ export default function Login({ onLoginSuccess }) {
       const data = await res.json();
       if (data.token) {
         localStorage.setItem("resernur_token", data.token);
-        onLoginSuccess();
+        onLoginSuccess(data.token);
       } else {
         throw new Error("No se recibió token del servidor.");
       }
