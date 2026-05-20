@@ -12,7 +12,6 @@ const ALL_MENU_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
   { key: 'requests', label: 'Solicitudes', icon: 'pending_actions' },
   { key: 'reservations', label: 'Reservas', icon: 'event_seat' },
-  { key: 'resources', label: 'Recursos', icon: 'domain' },
   { key: 'create-space', label: 'Crear espacios', icon: 'add_business' },
   { key: 'users', label: 'Usuarios', icon: 'group' },
   { key: 'analytics', label: 'Analitica', icon: 'insights' }
@@ -25,7 +24,7 @@ export default function AdminPanel({ editingSpace = null, onEditHandled, isManag
   const menuItems = useMemo(() => {
     if (!isManager) return ALL_MENU_ITEMS;
     return ALL_MENU_ITEMS.filter(item => 
-      ['dashboard', 'requests', 'reservations', 'resources'].includes(item.key)
+      ['dashboard', 'requests', 'reservations'].includes(item.key)
     );
   }, [isManager]);
 

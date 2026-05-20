@@ -144,39 +144,43 @@ export default function TopNavBar({ currentView, onNavigate, onLogout, isAdmin =
             </button>
 
             {isNotificationsOpen && (
-              <div className="absolute right-0 mt-2 w-[340px] max-h-[420px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl z-50">
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                  <p className="text-sm font-bold text-slate-800">Notificaciones</p>
-                  <span className="text-xs text-slate-500">{notifications.length} total</span>
+              <div className="absolute right-0 mt-2 w-[360px] rounded-lg border border-slate-200 bg-white shadow-2xl z-50 flex flex-col" style={{ maxHeight: '450px' }}>
+                {/* Header (Sticky) */}
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white rounded-t-lg">
+                  <p className="text-[1rem] font-bold text-[#001e40]">Notificaciones</p>
+                  <span className="text-[0.8rem] text-slate-500">{notifications.length} total</span>
                 </div>
 
-                {notifications.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-sm text-slate-500">
-                    No tienes notificaciones todavia.
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100">
-                    {notifications.map((notification) => {
-                      let displayMessage = notification.message;
-                      if (displayMessage === "Your booking request has been created and is pending review") {
-                        displayMessage = "Tu solicitud ha sido creada y está pendiente de revisión.";
-                      } else if (displayMessage === "Se creo una nueva reserva") {
-                        displayMessage = "Ha llegado una nueva solicitud de reserva.";
-                      }
+                {/* Content (Scrollable) */}
+                <div className="overflow-y-auto flex-1 custom-scrollbar pb-2">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-slate-500">
+                      No tienes notificaciones todavia.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {notifications.map((notification) => {
+                        let displayMessage = notification.message;
+                        if (displayMessage === "Your booking request has been created and is pending review") {
+                          displayMessage = "Tu solicitud ha sido creada y está pendiente de revisión.";
+                        } else if (displayMessage === "Se creo una nueva reserva") {
+                          displayMessage = "Ha llegado una nueva solicitud de reserva.";
+                        }
 
-                      const isReadStatus = notification.read || notification.isRead;
+                        const isReadStatus = notification.read || notification.isRead;
 
-                      return (
-                        <article key={notification.id} className="px-4 py-3 hover:bg-slate-50 transition-colors border-l-4" style={{ borderColor: isReadStatus ? 'transparent' : '#dc2626' }}>
-                          <p className={`text-sm text-slate-800 ${!isReadStatus ? 'font-bold' : ''}`}>{displayMessage}</p>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {new Date(notification.createdAt).toLocaleString()}
-                          </p>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
+                        return (
+                          <article key={notification.id} className="px-5 py-4 hover:bg-slate-50 transition-colors border-l-4" style={{ borderColor: isReadStatus ? 'transparent' : '#001e40' }}>
+                            <p className={`text-[0.9rem] ${!isReadStatus ? 'font-bold text-[#001e40]' : 'text-[#191c1e]'} leading-snug`}>{displayMessage}</p>
+                            <p className="text-[0.75rem] text-slate-500 mt-2">
+                              {new Date(notification.createdAt).toLocaleString()}
+                            </p>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

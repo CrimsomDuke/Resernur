@@ -21,8 +21,8 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [photoHint, setPhotoHint] = useState('');
   const [selectedImageFiles, setSelectedImageFiles] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
   const [encargados, setEncargados] = useState([]);
   const [isLoadingEncargados, setIsLoadingEncargados] = useState(true);
   const [encargadosError, setEncargadosError] = useState('');
@@ -65,9 +65,9 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
     });
 
     setSelectedImageFiles([]);
+    setExistingImages([]);
     setSuccessMsg('');
     setErrorMsg('');
-    setPhotoHint('');
 
     // Fetch existing equipment for this space
     const fetchEq = async () => {
@@ -80,8 +80,16 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
           const data = await res.json();
           setEquipmentList(data.content || []);
         }
+
+        const resImages = await fetch(`http://localhost:5000/api/places/${editingSpace.id}/images?pageSize=50`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (resImages.ok) {
+          const imgData = await resImages.json();
+          setExistingImages(imgData.content || []);
+        }
       } catch (e) {
-        console.error("Error cargando equipo", e);
+        console.error("Error cargando informacion adicional", e);
       }
     };
     fetchEq();
@@ -158,14 +166,33 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
 
   const onSelectPhoto = (event) => {
     const files = Array.from(event.target.files || []);
-    setSelectedImageFiles(files);
-
     if (files.length > 0) {
-      const previewNames = files.slice(0, 3).map((file) => file.name).join(', ');
-      const extraLabel = files.length > 3 ? ` y ${files.length - 3} mas` : '';
-      setPhotoHint(`${files.length} imagen(es) seleccionada(s): ${previewNames}${extraLabel}.`);
-    } else {
-      setPhotoHint('');
+      setSelectedImageFiles((prev) => [...prev, ...files]);
+    }
+    // Para permitir subir la misma imagen despues de borrarla
+    event.target.value = null;
+  };
+
+  const handleRemoveNewImage = (idxToRemove) => {
+    setSelectedImageFiles((prev) => prev.filter((_, idx) => idx !== idxToRemove));
+  };
+
+  const handleRemoveExistingImage = async (imageId) => {
+    if (!window.confirm("¿Seguro que deseas eliminar esta imagen permanentemente?")) return;
+    try {
+      const token = localStorage.getItem('resernur_token');
+      const res = await fetch(`http://localhost:5000/api/places/images/${imageId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (res.ok) {
+        setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+      } else {
+        alert("No se pudo eliminar la imagen del servidor.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error de red al eliminar la imagen.");
     }
   };
 
@@ -201,7 +228,6 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
     event.preventDefault();
     setSuccessMsg('');
     setErrorMsg('');
-    setPhotoHint('');
 
     if (!isValid) {
       setErrorMsg('Completa nombre, capacidad valida y selecciona un encargado para registrar el espacio.');
@@ -546,9 +572,25 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
               </p>
             </label>
 
-            {photoHint && (
-              <div className="rounded-lg bg-primary-fixed/50 border border-primary-fixed-dim px-4 py-3 text-sm text-on-surface">
-                {photoHint}
+            {(existingImages.length > 0 || selectedImageFiles.length > 0) && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                {existingImages.map((img) => (
+                  <div key={img.id} className="relative aspect-video bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden group">
+                    <img src={img.url} alt="Space" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => handleRemoveExistingImage(img.id)} className="absolute top-1 right-1 bg-white/80 hover:bg-error hover:text-white rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                  </div>
+                ))}
+                {selectedImageFiles.map((file, idx) => (
+                  <div key={idx} className="relative aspect-video bg-surface-container-low rounded-lg border border-outline-variant overflow-hidden group flex items-center justify-center p-2 text-center text-ellipsis">
+                    <span className="text-[10px] font-semibold text-on-surface-variant break-all line-clamp-3">{file.name}</span>
+                    <button type="button" onClick={() => handleRemoveNewImage(idx)} className="absolute top-1 right-1 bg-white/80 hover:bg-error hover:text-white rounded-md p-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                    <div className="absolute top-0 left-0 bg-secondary-container text-secondary text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg uppercase tracking-wider">Nuevo</div>
+                  </div>
+                ))}
               </div>
             )}
 
