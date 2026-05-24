@@ -35,6 +35,8 @@ Thumbs.db
 **/.eslintcache
 **/.stylelintcache
 
+**/screenshots/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

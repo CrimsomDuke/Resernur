@@ -9,6 +9,7 @@ import com.resernur.api.models.enums.PlaceStatus;
 import com.resernur.api.repositories.places.PlaceRepository;
 import com.resernur.api.repositories.users.UserRepository;
 import com.resernur.api.services.places.PlaceService;
+import com.resernur.api.utils.components.places.PlaceValidationComponent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -37,8 +38,12 @@ public class PlaceServiceTests {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PlaceValidationComponent placeValidationComponent;
+
     @InjectMocks
     private PlaceService placeService;
+
 
     @Test
     public void searchPlaces_withQuery_returnsPagedResponse() {

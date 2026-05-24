@@ -35,6 +35,11 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
         }
 
+        if(e instanceof BadCredentialsException){
+            result.setErrorMessage("Credenciales invalidas. Por favor verifica tu usuario y contraseña.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
+        }
+
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR) // Use 500 for unknown errors
                 .body(result);
