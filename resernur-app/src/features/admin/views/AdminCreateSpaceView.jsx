@@ -435,6 +435,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
                   value={form.name}
                   onChange={onInputChange('name')}
                   placeholder="Ej: Laboratorio C-302"
+                  data-testid='create-space-name'
                   className="mt-2 w-full rounded-lg border border-outline-variant px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   required
                 />
@@ -448,6 +449,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
                   value={form.capacity}
                   onChange={onInputChange('capacity')}
                   placeholder="40"
+                  data-testid='create-space-capacity'
                   className="mt-2 w-full rounded-lg border border-outline-variant px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   required
                 />
@@ -462,6 +464,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
                   value={form.location}
                   onChange={onInputChange('location')}
                   placeholder="Bloque A - Piso 2"
+                  data-testid='create-space-location'
                   className="mt-2 w-full rounded-lg border border-outline-variant px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </label>
@@ -471,6 +474,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
                 <select
                   value={form.userInChargeId}
                   onChange={onInputChange('userInChargeId')}
+                  data-testid='create-space-userInCharge'
                   className="mt-2 w-full rounded-lg border border-outline-variant px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   required
                   disabled={isLoadingEncargados || encargados.length === 0}
@@ -499,6 +503,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
                 rows="4"
                 value={form.description}
                 onChange={onInputChange('description')}
+                data-testid='create-space-description'
                 placeholder="Describe el uso academico, recursos, restricciones y notas del espacio..."
                 className="mt-2 w-full rounded-lg border border-outline-variant px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
@@ -609,6 +614,7 @@ export default function AdminCreateSpaceView({ editingSpace = null, onEditSaved,
               <button
                 type="submit"
                 disabled={!isValid || isSubmitting}
+                data-testid='create-space-submit-button'
                 className="px-6 py-3 rounded-md bg-primary text-white font-semibold hover:bg-primary-container transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Guardando...' : (isEditMode ? 'Actualizar espacio' : 'Guardar espacio')}
