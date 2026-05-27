@@ -8,7 +8,7 @@ export function parseTokenPayload(token) {
     const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=');
     return JSON.parse(atob(padded));
-  } catch {
+  } catch(e) {
     return null;
   }
 }
