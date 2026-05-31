@@ -87,10 +87,6 @@ public class PlaceEquipmentController {
     @RequiresAnyRole(roles = {"ADMINISTRADOR", "ENCARGADO"})
     public ResponseEntity<StandardResult<PlaceEquipmentResponseDTO>> modifyQuantity(@PathVariable int equipmentId, @RequestBody ModifyQuantityPlaceEquipmentDTO body) {
         Integer qty = body.getQuantity();
-        if (qty == null) {
-            StandardResult<PlaceEquipmentResponseDTO> bad = new StandardResult<>(false, "quantity is required", null);
-            return ResponseEntity.badRequest().body(bad);
-        }
         StandardResult<PlaceEquipmentResponseDTO> res = equipmentService.modifyQuantity(equipmentId, qty);
         if (!res.isSuccess()) {
             if (res.getErrorMessage().toLowerCase().contains("not found")) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
