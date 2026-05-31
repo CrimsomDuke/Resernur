@@ -6,9 +6,11 @@ import com.resernur.api.dtos.bookings.BookingRequestUpdateDTO;
 import com.resernur.api.dtos.exceptions.ResernurException;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.BookingRequestStatus;
+import com.resernur.api.models.enums.UserRole;
 import com.resernur.api.models.places.Place;
 import com.resernur.api.models.users.User;
 import com.resernur.api.repositories.bookings.BookingRequestRepository;
+import com.resernur.api.repositories.users.UserRepository;
 import com.resernur.api.utils.components.bookings.BookingRequestValidationComponent;
 import com.resernur.api.utils.components.config_parameters.ConfigurationProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +35,10 @@ public class BookingRequestValidationComponentTests {
     BookingRequestRepository bookingRequestRepository;
     @Mock
     ConfigurationProvider configProvider;
+
+    @Mock
+    UserRepository userRepository;
+
     BookingRequestValidationComponent validator;
     User user;
     Place place;
@@ -196,4 +202,23 @@ public class BookingRequestValidationComponentTests {
         ResernurException ex = assertThrows(ResernurException.class, () ->
                 validator.validateOverlappingOnUpdate(dto, req, bookingRequestRepository));
     }
+
+    @Test
+    public void validateUserInChargeOrAdmin_Success(){
+        int userId = 1;
+        user.setRole(UserRole.ADMINISTRADOR);
+        when(userRepository.findById((long) userId)).thenReturn(Optional.of(user));
+
+        assertDoesNotThrow(() -> validator.validateUserIsInChargeOrAdmin(userId, place, userRepository));
+    }
+
+    @Test
+    public void validateUserInChargeeOrAdmin_Failure(){
+        int userId = 1;
+        user.setRole(UserRole.SOLICITANTE);
+        when(userRepository.findById((long) userId)).thenReturn(Optional.of(user));
+
+        assertThrows(ResernurException.class, () -> validator.validateUserIsInChargeOrAdmin(userId, place, userRepository));
+    }
+
 }
