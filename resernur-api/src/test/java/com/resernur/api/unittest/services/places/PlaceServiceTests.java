@@ -181,4 +181,10 @@ public class PlaceServiceTests {
         assertFalse(result.isSuccess());
         verify(placeRepository, never()).deleteById(anyInt());
     }
+
+    @Test
+    public void changePlace_Success(){
+        Optional<Place> placeOpt = new Optional<Place>();
+        when(placeRepository.findById(1)).thenReturn(any(Optional<Place>()));
+    }
 }

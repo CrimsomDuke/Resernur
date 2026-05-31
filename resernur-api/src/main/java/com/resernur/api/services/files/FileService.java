@@ -96,16 +96,4 @@ public class FileService {
         if (idx <= 0 || idx == filename.length() - 1) return "";
         return filename.substring(idx + 1);
     }
-
-    private String buildPublicUrl(String relativePath) {
-        String normalized = relativePath.replace("\\", "/");
-        if (publicUrlBase != null && !publicUrlBase.isBlank()) {
-            String base = publicUrlBase.endsWith("/") ? publicUrlBase.substring(0, publicUrlBase.length()-1) : publicUrlBase;
-            return base + "/" + mediaEndpoint + "/" + normalized;
-        }
-        return ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/" + mediaEndpoint + "/")
-                .path(normalized)
-                .toUriString();
-    }
 }
