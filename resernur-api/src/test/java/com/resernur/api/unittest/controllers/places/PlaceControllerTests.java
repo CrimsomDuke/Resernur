@@ -6,6 +6,7 @@ import com.resernur.api.dtos.places.PlaceImageResponseDTO;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.dtos.pojos.SearchQuery;
+import com.resernur.api.models.enums.PlaceStatus;
 import com.resernur.api.services.places.PlaceImageService;
 import com.resernur.api.services.places.PlaceService;
 import org.junit.jupiter.api.BeforeEach;
@@ -118,5 +119,34 @@ public class PlaceControllerTests {
         var response = placeController.deletePlaceImage(imageId);
         assertNotNull(response);
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    }
+
+    @Test
+    public void getImagesForPlace_Success() {
+        int placeId = 1;
+        int page = 0;
+        int pageSize = 10;
+        PagedResponse<PlaceImageResponseDTO> paged = new PagedResponse<>();
+        when(placeImageService.getImagesForPlace(eq(placeId), any(SearchQuery.class))).thenReturn(paged);
+        var response = placeController.getImagesForPlace(placeId, page, pageSize);
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(paged, response.getBody());
+    }
+
+    @Test
+    public void changeStatus_Success() {
+        int placeId = 1;
+        var status = PlaceStatus.AVAILABLE;
+        PlaceDTO dto = new PlaceDTO();
+        dto.setId(placeId);
+        dto.setName("Aula Magna");
+        StandardResult<PlaceDTO> result = new StandardResult<>(true, "", dto);
+        when(placeService.changePlaceStatus(eq(placeId), eq(status))).thenReturn(result);
+        var response = placeController.changeStatus(placeId, status);
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().isSuccess());
+        assertEquals(placeId, response.getBody().getData().getId());
     }
 }

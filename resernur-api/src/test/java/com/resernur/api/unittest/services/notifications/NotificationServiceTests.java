@@ -4,6 +4,7 @@ import com.resernur.api.dtos.notifications.NotificationDTO;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
+import com.resernur.api.models.enums.UserRole;
 import com.resernur.api.models.notifications.Notification;
 import com.resernur.api.models.users.User;
 import com.resernur.api.repositories.notifications.NotificationRepository;
@@ -116,5 +117,20 @@ public class NotificationServiceTests {
         StandardResult<NotificationDTO> result = notificationService.createNotification(2L, "msg");
         assertFalse(result.isSuccess());
         assertEquals("User not found", result.getErrorMessage());
+    }
+
+    @Test
+    public void createNotificationForUsersInRole_Success(){
+        UserRole role = UserRole.ADMINISTRADOR;
+        String message = "test message";
+
+        when(userRepository.findByRole(role)).thenReturn(List.of(user));
+        when(notificationRepository.save(any(Notification.class))).thenReturn(any(Notification.class));
+
+        PagedResponse<NotificationDTO> result = notificationService.createNotificationForUsersInRole(role, message);
+
+        assertTrue(result.isSuccess());
+        verify(userRepository).findByRole(role);
+        verify(notificationRepository, times(1)).save(any(Notification.class));
     }
 }

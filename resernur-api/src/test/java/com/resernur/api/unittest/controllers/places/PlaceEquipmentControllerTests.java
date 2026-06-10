@@ -15,6 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -158,6 +160,17 @@ public class PlaceEquipmentControllerTests {
         moveDTO.setNewPlaceId(3);
         StandardResult<PlaceEquipmentResponseDTO> result = new StandardResult<>(false, "error", null);
         when(equipmentService.moveEquipment(eq(1), eq(3))).thenReturn(result);
+        var response = controller.moveEquipment(1, moveDTO);
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertFalse(response.getBody().isSuccess());
+    }
+
+    @Test
+    public void moveEquipment_NullNewPlaceId(){
+        MovePlaceEquipmentDTO moveDTO = new MovePlaceEquipmentDTO();
+        moveDTO.setNewPlaceId(0);
+        StandardResult<PlaceEquipmentResponseDTO> result = new StandardResult<>(false, "error", null);
         var response = controller.moveEquipment(1, moveDTO);
         assertNotNull(response);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());

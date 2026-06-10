@@ -4,11 +4,17 @@ import com.resernur.api.dtos.places.PlaceDTO;
 import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
+import com.resernur.api.models.notifications.Notification;
 import com.resernur.api.models.places.Place;
 import com.resernur.api.models.enums.PlaceStatus;
+import com.resernur.api.models.users.User;
+import com.resernur.api.repositories.bookings.BookingRepository;
+import com.resernur.api.repositories.bookings.BookingRequestRepository;
 import com.resernur.api.repositories.places.PlaceRepository;
 import com.resernur.api.repositories.users.UserRepository;
+import com.resernur.api.services.NotificationService;
 import com.resernur.api.services.places.PlaceService;
+import com.resernur.api.utils.components.places.PlaceValidationComponent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -27,6 +33,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.postgresql.hostchooser.HostRequirement.any;
 
 @ExtendWith(MockitoExtension.class)
 public class PlaceServiceTests {
@@ -37,8 +44,21 @@ public class PlaceServiceTests {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PlaceValidationComponent placeValidationComponent;
+
+    @Mock
+    private BookingRepository bookingRepository;
+
+    @Mock
+    private BookingRequestRepository bookingRequestRepository;
+
     @InjectMocks
     private PlaceService placeService;
+
+    @Mock
+    private NotificationService notificationService;
+
 
     @Test
     public void searchPlaces_withQuery_returnsPagedResponse() {
@@ -176,4 +196,76 @@ public class PlaceServiceTests {
         assertFalse(result.isSuccess());
         verify(placeRepository, never()).deleteById(anyInt());
     }
+
+    @Test
+    public void changePlaceStatus_Success(){
+        int placeId = 10;
+        PlaceStatus status = PlaceStatus.AVAILABLE;
+
+        User user = new User();
+        user.setId(1L);
+        Place place = new Place();
+        place.setUserInCharge(user);
+
+        when(placeRepository.findById(placeId)).thenReturn(Optional.of(place));
+        when(placeRepository.save(any(Place.class))).thenReturn(place);
+
+        StandardResult<PlaceDTO> result = placeService.changePlaceStatus(placeId, status);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getData().getStatus() == status);
+
+        verify(placeRepository, times(1)).findById(placeId);
+        verify(placeRepository, times(1)).save(any(Place.class));
+    }
+
+    @Test
+    public void changePlaceStatus_ToUnderMaintenance_Success(){
+        int placeId = 10;
+        PlaceStatus status = PlaceStatus.UNDER_MAINTENANCE;
+
+        User user = new User();
+        user.setId(1L);
+        Place place = new Place();
+        place.setUserInCharge(user);
+
+        when(placeRepository.findById(placeId)).thenReturn(Optional.of(place));
+        when(placeRepository.save(any(Place.class))).thenReturn(place);
+        when(bookingRepository.findCompletedByPlaceIdAndEndTimeAfter(eq(placeId), any())).thenReturn(Arrays.asList());
+        when(bookingRequestRepository.findActiveRequestsByPlaceId(eq(placeId))).thenReturn(Arrays.asList());
+
+        StandardResult<PlaceDTO> result = placeService.changePlaceStatus(placeId, status);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getData().getStatus() == status);
+
+        verify(placeRepository, times(1)).findById(placeId);
+        verify(placeRepository, times(1)).save(any(Place.class));
+    }
+
+    @Test
+    public void cancelRequestsForAPlace_Success(){
+        int placeId = 10;
+
+        when(bookingRepository.findCompletedByPlaceIdAndEndTimeAfter(eq(placeId), any())).thenReturn(Arrays.asList());
+
+        placeService.cancelRequestsForAPlace(placeId);
+
+        verify(bookingRepository, times(1)).findCompletedByPlaceIdAndEndTimeAfter(eq(placeId), any());
+        verify(notificationService, times(0)).createNotification(any(), any());
+    }
+
+    @Test
+    public void cancelPendingRequestsForAPlace_Success(){
+        int placeId = 10;
+
+        when(bookingRequestRepository.findActiveRequestsByPlaceId(eq(placeId))).thenReturn(Arrays.asList());
+
+        placeService.cancelPendingRequestsForAPlace(placeId, "test message");
+
+        verify(bookingRequestRepository, times(1)).findActiveRequestsByPlaceId(eq(placeId));
+        verify(notificationService, times(0)).createNotification(any(), any());
+
+    }
+
 }
