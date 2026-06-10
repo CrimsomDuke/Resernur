@@ -144,7 +144,7 @@ export default function BookingEngine({ spaceToBook, onGoBack }) {
             {/* Error */}
             {errorMsg && (
               <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg border border-red-200 text-red-700 text-sm font-medium">
-                <span className="material-symbols-outlined shrink-0">error</span>
+                <span className="material-symbols-outlined shrink-0" data-testid="error-message">error</span>
                 {errorMsg}
               </div>
             )}

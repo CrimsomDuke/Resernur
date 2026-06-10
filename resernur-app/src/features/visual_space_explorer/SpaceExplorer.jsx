@@ -305,6 +305,7 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
             {filteredSpaces.map((space) => (
               <div
                 key={space.id}
+                data-testid={`space-card-${space.id}`}
                 className={`bg-surface-container-lowest rounded-xl overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer ${selectedSpace?.id === space.id ? 'ring-2 ring-primary border-l-4 border-tertiary' : ''}`}
                 onClick={() => setSelectedSpace(space)}
               >
