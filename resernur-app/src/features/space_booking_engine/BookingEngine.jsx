@@ -12,6 +12,7 @@ export default function BookingEngine({ spaceToBook, onGoBack }) {
   const [reason, setReason] = useState('');
   const [attendees, setAttendees] = useState('');
   const [activityType, setActivityType] = useState('ACADEMICO');
+  const [attachment, setAttachment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -64,6 +65,9 @@ export default function BookingEngine({ spaceToBook, onGoBack }) {
       formData.append('activityType', activityType);
       formData.append('requestedStartTime', requestedStartTime);
       formData.append('requestedEndTime', requestedEndTime);
+      if (attachment) {
+        formData.append('attachment', attachment);
+      }
 
       const res = await fetch('http://localhost:5000/api/booking-requests', {
         method: 'POST',
@@ -238,6 +242,19 @@ export default function BookingEngine({ spaceToBook, onGoBack }) {
                   value={reason}
                   onChange={e => setReason(e.target.value)}
                 ></textarea>
+              </div>
+
+              {/* Attachment */}
+              <div className="space-y-3">
+                <label className="block text-sm font-bold tracking-wide uppercase text-on-surface-variant font-label">Documento de Respaldo (opcional)</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    onChange={e => setAttachment(e.target.files[0])}
+                    className="w-full p-3 bg-surface-container-high border-b-2 border-transparent focus:border-primary rounded-lg transition-all text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-container file:text-on-primary-container hover:file:bg-primary hover:file:text-white"
+                  />
+                  <p className="mt-2 text-xs text-on-surface-variant">Sube un PDF o imagen si necesitas respaldar la solicitud (peso máximo recomendado: 5MB).</p>
+                </div>
               </div>
 
               {/* Footer */}

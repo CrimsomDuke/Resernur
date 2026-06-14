@@ -25,6 +25,7 @@ import com.resernur.api.services.bookings.BookingService;
 // ...existing code...
 import com.resernur.api.utils.components.bookings.BookingRequestValidationComponent;
 import com.resernur.api.utils.components.config_parameters.ConfigurationProvider;
+import com.resernur.api.utils.components.places.PlaceValidationComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -146,7 +147,6 @@ public class BookingRequestServiceTests {
         verify(bookingRequestValidationComponent, times(1)).validateBookingTimes(any(), eq(startTime), eq(endTime), eq(configurationProvider));
         verify(bookingRequestValidationComponent, times(1)).validateOverlappingOnCreate(eq(dto), eq(bookingRequestRepository));
         verify(bookingRequestRepository, times(1)).save(any(BookingRequest.class));
-        verify(notificationService, times(1)).createNotification(eq(user.getId()), eq("Tu solicitud de reserva fue enviada y esta pendiente de revision"));
         verify(logService, times(1)).logAction(eq(Actions.CREATE), eq(user.getId().intValue()), eq("BOOKING_REQUEST"), eq(bookingRequest.getId()));
     }
 

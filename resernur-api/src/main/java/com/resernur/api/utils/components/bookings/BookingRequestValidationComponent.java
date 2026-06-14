@@ -47,7 +47,6 @@ public class BookingRequestValidationComponent {
         if(placeOpt.get().getStatus() != PlaceStatus.AVAILABLE){
             throw new ResernurException("El lugar no está disponible para reservas");
         }
-
     }
 
     public void validateBookingTimes(LocalDateTime requestCreatedTime,

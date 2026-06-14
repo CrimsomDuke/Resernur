@@ -1,130 +1,118 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-const SAMPLE_USERS = [
-  {
-    id: 1,
-    name: 'Mario Ballesteros',
-    email: 'm.ballesteros@scholarflow.edu',
-    role: 'Docente',
-    roleColor: 'primary',
-    status: 'Activo',
-    statusColor: 'green',
-    lastAccess: 'Hace 12 min',
-    avatar: 'MB'
-  },
-  {
-    id: 2,
-    name: 'Elena Gutiérrez',
-    email: 'elena.gtz@scholarflow.edu',
-    role: 'Administrador',
-    roleColor: 'on-primary-container',
-    status: 'Activo',
-    statusColor: 'green',
-    lastAccess: 'Ayer, 18:45',
-    avatar: 'EG'
-  },
-  {
-    id: 3,
-    name: 'Roberto Luna',
-    email: 'r.luna@student.scholar.edu',
-    role: 'Estudiante',
-    roleColor: 'surface-variant',
-    status: 'Inactivo',
-    statusColor: 'gray',
-    lastAccess: '03 Oct 2023',
-    avatar: 'RL'
-  }
-];
+const API = 'http://localhost:5000';
+
+function authHeaders() {
+  const token = localStorage.getItem('resernur_token');
+  return token
+    ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'application/json' };
+}
 
 export default function UserManagementView() {
   const [users, setUsers] = useState([]);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const token = localStorage.getItem('resernur_token');
-        const res = await fetch('http://localhost:5000/api/users?pageSize=100', {
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : ''
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.content) {
-            const mappedUsers = data.content.map(u => {
-              const initials = u.fullName ? u.fullName.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase() : 'U';
-              return {
-                id: u.id,
-                name: u.fullName || 'Sin Nombre',
-                email: u.email,
-                role: u.role || 'Desconocido',
-                roleColor: u.role === 'ADMIN' ? 'on-primary-container' : 'primary',
-                status: 'Activo', // El backend actual no parece enviar status en DTO
-                statusColor: 'green',
-                lastAccess: '-',
-                avatar: initials
-              };
-            });
-            setUsers(mappedUsers);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching users:', err);
-      }
-    };
-    fetchUsers();
-  }, []);
   const [showForm, setShowForm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    role: 'estudiante',
-    password: '••••••••'
+    role: 'SOLICITANTE',
+    password: 'resernur123'
   });
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/users?pageSize=100`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.content) {
+          const mappedUsers = data.content.map(u => {
+            const initials = u.fullName ? u.fullName.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase() : 'U';
+            return {
+              id: u.id,
+              name: u.fullName || 'Sin Nombre',
+              email: u.email,
+              role: u.role || 'SOLICITANTE',
+              roleColor: u.role === 'ADMINISTRADOR' ? 'on-primary-container' : 'primary',
+              avatar: initials
+            };
+          });
+          setUsers(mappedUsers);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateUser = (e) => {
+  const resetForm = () => {
+    setFormData({ fullName: '', email: '', role: 'SOLICITANTE', password: 'resernur123' });
+    setIsEditing(false);
+    setEditingUserId(null);
+    setShowForm(false);
+  };
+
+  const handleCreateOrUpdateUser = async (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.email) {
-      alert('Por favor completa todos los campos');
+    if (!formData.fullName || (!isEditing && !formData.email)) {
+      alert('Por favor completa todos los campos requeridos');
       return;
     }
 
-    const initials = formData.fullName
-      .split(' ')
-      .slice(0, 2)
-      .map((word) => word[0])
-      .join('')
-      .toUpperCase();
+    setIsLoading(true);
 
-    const newUser = {
-      id: users.length + 1,
-      name: formData.fullName,
-      email: formData.email,
-      role: formData.role.charAt(0).toUpperCase() + formData.role.slice(1),
-      roleColor: formData.role === 'admin' ? 'on-primary-container' : 'primary',
-      status: 'Activo',
-      statusColor: 'green',
-      lastAccess: 'Ahora',
-      avatar: initials
-    };
+    try {
+      if (isEditing && editingUserId) {
+        // PUT /api/users/{id}
+        const payload = {
+          fullName: formData.fullName,
+          password: formData.password
+        };
+        const res = await fetch(`${API}/api/users/${editingUserId}`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('No se pudo actualizar el usuario');
+        alert('Usuario actualizado exitosamente');
+      } else {
+        // POST /api/auth/register
+        const payload = {
+          fullName: formData.fullName,
+          email: formData.email,
+          role: formData.role,
+          password: formData.password
+        };
+        const res = await fetch(`${API}/api/auth/register`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('No se pudo crear el usuario. Verifica que el correo no exista ya.');
+        alert('Usuario creado exitosamente');
+      }
 
-    setUsers((prev) => [newUser, ...prev]);
-    setFormData({ fullName: '', email: '', role: 'estudiante', password: '••••••••' });
-    setShowForm(false);
-    alert('Usuario creado exitosamente');
-  };
-
-  const handleDeleteUser = (userId) => {
-    if (window.confirm('¿Está seguro de que desea eliminar este usuario?')) {
-      setUsers((prev) => prev.filter((user) => user.id !== userId));
-      alert('Usuario eliminado');
+      resetForm();
+      fetchUsers();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -134,9 +122,11 @@ export default function UserManagementView() {
       setFormData({
         fullName: user.name,
         email: user.email,
-        role: user.role.toLowerCase(),
-        password: '••••••••'
+        role: user.role,
+        password: '' // vacio para no sobreescribir si no escriben nada
       });
+      setIsEditing(true);
+      setEditingUserId(userId);
       setShowForm(true);
     }
   };
@@ -146,12 +136,6 @@ export default function UserManagementView() {
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const stats = {
-    total: users.length,
-    active: users.filter((u) => u.status === 'Activo').length,
-    pending: users.filter((u) => u.status === 'Pendiente').length
-  };
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto grid grid-cols-12 gap-8">
@@ -166,7 +150,7 @@ export default function UserManagementView() {
             </p>
           </div>
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => { resetForm(); setShowForm(!showForm); }}
             className="bg-gradient-to-br from-[#001e40] to-[#003366] text-white px-6 py-3 rounded-xl font-body-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-shadow active:scale-95"
           >
             <span className="material-symbols-outlined text-[20px]">person_add</span>
@@ -175,18 +159,10 @@ export default function UserManagementView() {
         </div>
 
         {/* Stats Summary Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-white p-5 rounded-2xl border-l-4 border-primary-container shadow-sm">
             <p className="text-label-caps text-on-secondary-container mb-1">Total Usuarios</p>
-            <h3 className="text-headline-md text-primary-container">{stats.total}</h3>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border-l-4 border-green-500 shadow-sm">
-            <p className="text-label-caps text-on-secondary-container mb-1">Activos Ahora</p>
-            <h3 className="text-headline-md text-primary-container">{stats.active}</h3>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border-l-4 border-orange-400 shadow-sm">
-            <p className="text-label-caps text-on-secondary-container mb-1">Pendientes</p>
-            <h3 className="text-headline-md text-primary-container">{stats.pending}</h3>
+            <h3 className="text-headline-md text-primary-container">{users.length}</h3>
           </div>
         </div>
 
@@ -210,8 +186,6 @@ export default function UserManagementView() {
                 <tr className="bg-surface-container-low border-b border-[#eceef0]">
                   <th className="px-6 py-3 text-label-caps text-on-secondary-container">Nombre y Correo</th>
                   <th className="px-6 py-3 text-label-caps text-on-secondary-container">Rol</th>
-                  <th className="px-6 py-3 text-label-caps text-on-secondary-container">Estado</th>
-                  <th className="px-6 py-3 text-label-caps text-on-secondary-container">Último Acceso</th>
                   <th className="px-6 py-3 text-label-caps text-on-secondary-container text-right">Acciones</th>
                 </tr>
               </thead>
@@ -237,36 +211,14 @@ export default function UserManagementView() {
                           {user.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div
-                          className={`flex items-center gap-1.5 ${
-                            user.statusColor === 'green' ? 'text-green-600' : 'text-on-surface-variant'
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              user.statusColor === 'green' ? 'bg-green-500' : 'bg-outline-variant'
-                            }`}
-                          />
-                          <span className="text-body-base text-[13px] font-semibold">{user.status}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-body-base text-[13px] text-on-surface-variant">{user.lastAccess}</p>
-                      </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => handleEditUser(user.id)}
                             className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-primary-fixed hover:text-primary-container transition-all"
+                            title="Editar usuario"
                           >
                             <span className="material-symbols-outlined text-[18px]">edit</span>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-error-container hover:text-error transition-all"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">delete</span>
                           </button>
                         </div>
                       </td>
@@ -274,7 +226,7 @@ export default function UserManagementView() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center text-on-surface-variant">
+                    <td colSpan="3" className="px-6 py-8 text-center text-on-surface-variant">
                       No se encontraron usuarios
                     </td>
                   </tr>
@@ -285,23 +237,8 @@ export default function UserManagementView() {
 
           <div className="px-6 py-4 bg-surface-container-low flex justify-between items-center text-caption-micro text-on-surface-variant">
             <span>
-              Mostrando 1-{filteredUsers.length} de {users.length} usuarios
+              Mostrando {filteredUsers.length} de {users.length} usuarios
             </span>
-            <div className="flex gap-1">
-              <button className="w-8 h-8 flex items-center justify-center rounded bg-white shadow-sm hover:bg-primary-container hover:text-white transition-colors">
-                1
-              </button>
-              {users.length > 10 && (
-                <>
-                  <button className="w-8 h-8 flex items-center justify-center rounded bg-white shadow-sm hover:bg-primary-container hover:text-white transition-colors">
-                    2
-                  </button>
-                  <button className="w-8 h-8 flex items-center justify-center rounded bg-white shadow-sm hover:bg-primary-container hover:text-white transition-colors">
-                    3
-                  </button>
-                </>
-              )}
-            </div>
           </div>
         </div>
       </div>
@@ -312,15 +249,19 @@ export default function UserManagementView() {
           <div className="bg-white rounded-xl shadow-md border-l-4 border-primary-container sticky top-24 overflow-hidden">
             <div className="p-6 border-b border-[#eceef0]">
               <div className="flex items-center gap-2 mb-1">
-                <span className="material-symbols-outlined text-primary-container">person_add</span>
-                <h4 className="font-headline-md text-primary-container text-[18px]">Crear Nuevo Usuario</h4>
+                <span className="material-symbols-outlined text-primary-container">
+                  {isEditing ? 'manage_accounts' : 'person_add'}
+                </span>
+                <h4 className="font-headline-md text-primary-container text-[18px]">
+                  {isEditing ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
+                </h4>
               </div>
               <p className="text-body-base text-on-surface-variant text-[13px]">
-                Ingrese los detalles del usuario para habilitar el acceso.
+                {isEditing ? 'Actualice los datos permitidos del usuario.' : 'Ingrese los detalles del usuario para habilitar el acceso.'}
               </p>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-6 space-y-5">
+            <form onSubmit={handleCreateOrUpdateUser} className="p-6 space-y-5">
               <div className="space-y-1.5">
                 <label className="font-body-semibold text-[13px] text-on-secondary-container">
                   Nombre Completo
@@ -330,6 +271,7 @@ export default function UserManagementView() {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleInputChange}
+                  required
                   className="w-full bg-surface-container-high border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#003366]/20 text-body-base placeholder:text-outline-variant"
                   placeholder="Ej: Dr. Manuel Rojas"
                 />
@@ -344,9 +286,12 @@ export default function UserManagementView() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full bg-surface-container-high border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#003366]/20 text-body-base placeholder:text-outline-variant"
+                  required={!isEditing}
+                  disabled={isEditing}
+                  className="w-full bg-surface-container-high border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#003366]/20 text-body-base placeholder:text-outline-variant disabled:opacity-60 disabled:cursor-not-allowed"
                   placeholder="m.rojas@scholarflow.edu"
                 />
+                {isEditing && <p className="text-[10px] text-on-surface-variant">El correo no se puede modificar.</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -357,24 +302,28 @@ export default function UserManagementView() {
                   name="role"
                   value={formData.role}
                   onChange={handleInputChange}
-                  className="w-full bg-surface-container-high border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#003366]/20 text-body-base appearance-none cursor-pointer"
+                  disabled={isEditing}
+                  className="w-full bg-surface-container-high border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#003366]/20 text-body-base appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <option value="estudiante">Estudiante</option>
-                  <option value="docente">Docente</option>
-                  <option value="admin">Administrador</option>
+                  <option value="SOLICITANTE">Solicitante (Estudiante/Docente)</option>
+                  <option value="ENCARGADO">Encargado de Espacio</option>
+                  <option value="ADMINISTRADOR">Administrador</option>
                 </select>
+                {isEditing && <p className="text-[10px] text-on-surface-variant">El rol no se puede modificar.</p>}
               </div>
 
               <div className="space-y-1.5">
                 <label className="font-body-semibold text-[13px] text-on-secondary-container">
-                  Contraseña Temporal
+                  Contraseña
                 </label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    className="w-full bg-surface-container-high border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#003366]/20 text-body-base"
+                    name="password"
+                    onChange={handleInputChange}
+                    className="w-full bg-surface-container-high border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#003366]/20 text-body-base pr-12"
                     value={formData.password}
-                    readOnly
+                    placeholder={isEditing ? 'Dejar en blanco para no cambiar' : 'Contraseña inicial'}
                   />
                   <button
                     type="button"
@@ -386,42 +335,25 @@ export default function UserManagementView() {
                     </span>
                   </button>
                 </div>
-                <p className="text-[10px] text-on-surface-variant">Se solicitará cambio al primer inicio de sesión.</p>
               </div>
 
               <div className="pt-4 flex flex-col gap-3">
                 <button
                   type="submit"
-                  className="w-full bg-primary-container text-white py-3.5 rounded-xl font-body-semibold shadow-sm hover:shadow-md transition-all active:scale-95"
+                  disabled={isLoading}
+                  className="w-full bg-primary-container text-white py-3.5 rounded-xl font-body-semibold shadow-sm hover:shadow-md transition-all active:scale-95 disabled:opacity-70"
                 >
-                  Guardar Usuario
+                  {isLoading ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Guardar Usuario')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={resetForm}
                   className="w-full bg-surface-container-high text-on-secondary-container py-3 rounded-xl font-body-semibold hover:bg-surface-container-highest transition-colors"
                 >
                   Cancelar
                 </button>
               </div>
             </form>
-
-            {/* Contextual Help Card */}
-            <div className="m-6 p-4 bg-primary/5 rounded-xl border border-primary/10">
-              <div className="flex items-start gap-3">
-                <span className="material-symbols-outlined text-primary-container mt-0.5">info</span>
-                <div>
-                  <p className="text-body-semibold text-primary-container text-[13px]">Importación Masiva</p>
-                  <p className="text-caption-micro text-on-secondary-container mt-1">
-                    ¿Necesitas agregar cientos de estudiantes? Usa la herramienta de carga vía CSV para mayor
-                    eficiencia.
-                  </p>
-                  <a className="inline-block mt-2 text-primary-container font-bold text-[11px] underline" href="#">
-                    Ir a Importar
-                  </a>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -449,9 +381,8 @@ export default function UserManagementView() {
             <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
               <p className="text-body-semibold text-primary-container text-[13px] mb-2">Filtros Disponibles</p>
               <ul className="text-caption-micro text-on-secondary-container space-y-2">
-                <li>• Por rol (Estudiante, Docente, Admin)</li>
-                <li>• Por estado (Activo, Inactivo)</li>
-                <li>• Últimos accesos</li>
+                <li>• Por rol (Estudiante, Docente, Encargado, Admin)</li>
+                <li>• Búsqueda por nombre o correo</li>
               </ul>
             </div>
           </div>

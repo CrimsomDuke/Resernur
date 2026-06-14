@@ -604,33 +604,46 @@ export default function AdminRequestsView() {
                     {/* Spacer */}
                     <div style={{ flex: 1 }} />
 
-                    {/* Action buttons */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                      <button
-                        disabled={actionLoading}
-                        onClick={() => handleAccept(selectedReq.id)}
-                        style={{ padding: '0.75rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: actionLoading ? 0.7 : 1 }}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span>
-                        Aprobar Solicitud
-                      </button>
-                      <button
-                        disabled={actionLoading}
-                        onClick={() => handleOpenReject(selectedReq.id, 'changes')}
-                        style={{ padding: '0.75rem', borderRadius: '0.75rem', border: '2px solid var(--color-primary, #001e40)', cursor: 'pointer', background: 'transparent', color: 'var(--color-primary, #001e40)', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit_note</span>
-                        Pedir Cambios
-                      </button>
-                      <button
-                        disabled={actionLoading}
-                        onClick={() => handleOpenReject(selectedReq.id, 'reject')}
-                        style={{ padding: '0.75rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer', background: '#dc2626', color: '#fff', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: actionLoading ? 0.7 : 1 }}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>cancel</span>
-                        Rechazar Solicitud
-                      </button>
-                    </div>
+                    {/* Action buttons (only for PENDING requests) */}
+                    {selectedReq.status === 'PENDING' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                        <button
+                          disabled={actionLoading}
+                          onClick={() => handleAccept(selectedReq.id)}
+                          style={{ padding: '0.75rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: actionLoading ? 0.7 : 1 }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span>
+                          Aprobar Solicitud
+                        </button>
+                        <button
+                          disabled={actionLoading}
+                          onClick={() => handleOpenReject(selectedReq.id, 'changes')}
+                          style={{ padding: '0.75rem', borderRadius: '0.75rem', border: '2px solid var(--color-primary, #001e40)', cursor: 'pointer', background: 'transparent', color: 'var(--color-primary, #001e40)', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit_note</span>
+                          Pedir Cambios
+                        </button>
+                        <button
+                          disabled={actionLoading}
+                          onClick={() => handleOpenReject(selectedReq.id, 'reject')}
+                          style={{ padding: '0.75rem', borderRadius: '0.75rem', border: 'none', cursor: 'pointer', background: '#dc2626', color: '#fff', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: actionLoading ? 0.7 : 1 }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>cancel</span>
+                          Rechazar Solicitud
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ padding: '1rem', background: selectedReq.status === 'REJECTED' ? '#fee2e2' : '#f3e8ff', borderRadius: '0.5rem' }}>
+                        <p style={{ margin: 0, fontWeight: 700, color: selectedReq.status === 'REJECTED' ? '#991b1b' : '#6b21a8' }}>
+                          Estado: {selectedReq.status === 'REJECTED' ? 'RECHAZADA' : 'CAMBIOS SOLICITADOS'}
+                        </p>
+                        {selectedReq.changesRequestedReason && (
+                          <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#43474f', fontStyle: 'italic' }}>
+                            "{selectedReq.changesRequestedReason}"
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

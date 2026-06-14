@@ -10,7 +10,7 @@ export default function AdminSidebar({ items, activeSection, onNavigate }) {
             <img src={logoNur} alt="NUR" className="h-9 w-9 rounded" />
             <div>
               <p className="font-headline text-lg leading-tight font-bold">ReserNur</p>
-              <p className="font-label text-[10px] uppercase tracking-widest text-white/80">Panel Administrativo</p>
+              <p className="font-label text-[10px] uppercase tracking-widest text-white/80">Panel de Gestión</p>
             </div>
           </div>
         </div>
@@ -26,6 +26,7 @@ export default function AdminSidebar({ items, activeSection, onNavigate }) {
                 key={item.key}
                 type="button"
                 onClick={() => onNavigate(item.key)}
+                data-testid={('admin-' + item.key)}
                 className={`w-full text-left px-4 py-3 rounded-r-full rounded-l-none flex items-center gap-3 transition-colors ${
                   isActive
                     ? 'bg-surface-container-lowest text-primary font-bold shadow-sm'

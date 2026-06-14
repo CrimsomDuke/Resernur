@@ -10,6 +10,7 @@ import com.resernur.api.dtos.pojos.PagedResponse;
 import com.resernur.api.dtos.pojos.SearchQuery;
 import com.resernur.api.dtos.pojos.StandardResult;
 import com.resernur.api.dtos.users.UserDTO;
+import com.resernur.api.models.bookings.Booking;
 import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.Actions;
 import com.resernur.api.models.enums.BookingRequestStatus;
@@ -203,10 +204,11 @@ public class BookingRequestService {
 
         validationComponent.validateUserIsInChargeOrAdmin(userId, req.getPlace(), userRepository);
 
-        // Mark place as RESERVED when a request is accepted
+        //Mark place as RESERVED
         Place place = req.getPlace();
         place.setStatus(PlaceStatus.RESERVED);
         placeRepository.save(place);
+
         // Mark accepted
         req.setStatus(BookingRequestStatus.ACCEPTED);
         bookingRequestRepository.save(req);

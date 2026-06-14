@@ -12,6 +12,8 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
   const [errorMsg, setErrorMsg] = useState("");
   const [usersById, setUsersById] = useState({});
   const [spaceImagesById, setSpaceImagesById] = useState({});
+  
+  const [equipmentList, setEquipmentList] = useState([]);
 
   const DEFAULT_IMAGES = [
     "https://lh3.googleusercontent.com/aida-public/AB6AXuCnw1bJEiqqg6hJ0WgN5OEE3d9xXzaa5CnvKVVKfWDu2waWCJ1Zw2ImMb4KikxZGOb9hWmXi9gwxVubXM2XKhMMm5kGTp8OxpMo_MjQdX8l11HmcJZg7r7WoMeRJk-I-4zR7J-mxIhOg6k4eRBQ_bVayhZMtERQirMCmUpSXNIAsm4tWZULclwjIcVIP8BWdXM4aOrFI9Wh4cOYiCrFUrYyKAgwW61K6seaVLCpmHjX_dISaLj7oCTsFaNspKyLCcsRVg_NGsO498w",
@@ -29,6 +31,7 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
     setSelectedImageIndex(0);
     // fetchSpaceImages is a no-op if already fetched (state already has them)
     fetchSpaceImages(selectedSpace.id);
+    fetchEquipment();
   }, [selectedSpace?.id]);
 
   const fetchSpaces = async () => {
@@ -172,12 +175,32 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
         setSpaces(prev => prev.filter(s => s.id !== selectedSpace.id));
         setSelectedSpace(null);
       } else {
-        const errText = await res.text();
-        alert(`No se pudo eliminar el espacio (Probablemente porque tiene reservas asociadas).\nError HTTP ${res.status}: ${errText}`);
+        if (res.status === 500) {
+          alert("Este espacio no puede ser eliminado de la base de datos porque ya cuenta con un historial de reservas o solicitudes activas.\n\nTe sugerimos inhabilitarlo utilizando el botón de Mantenimiento.");
+        } else {
+          const errText = await res.text();
+          alert(`No se pudo eliminar el espacio.\nError HTTP ${res.status}: ${errText}`);
+        }
       }
     } catch (err) {
       console.error(err);
       alert("Error de red al intentar eliminar el espacio.");
+    }
+  };
+
+  const fetchEquipment = async () => {
+    if (!selectedSpace) return;
+    try {
+      const token = localStorage.getItem('resernur_token');
+      const res = await fetch(`http://localhost:5000/api/places/${selectedSpace.id}/equipment?pageSize=50`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEquipmentList(data.content || []);
+      }
+    } catch (e) {
+      console.error("Error cargando equipos", e);
     }
   };
 
@@ -409,22 +432,16 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
                 <div className="mb-10">
                   <h5 className="font-headline text-sm font-bold text-primary uppercase tracking-widest mb-6 border-b border-surface-container-high pb-2">Equipamiento e Instalaciones</h5>
                   <div className="grid grid-cols-2 gap-y-6">
-                    <div className="flex items-center gap-4 text-on-surface-variant">
-                      <span className="material-symbols-outlined text-primary-container">videocam</span>
-                      <span className="text-sm font-medium">Proyector</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-on-surface-variant">
-                      <span className="material-symbols-outlined text-primary-container">wifi</span>
-                      <span className="text-sm font-medium">Conexión Wi-Fi</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-on-surface-variant">
-                      <span className="material-symbols-outlined text-primary-container">ac_unit</span>
-                      <span className="text-sm font-medium">Climatización</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-on-surface-variant">
-                      <span className="material-symbols-outlined text-primary-container">co2</span>
-                      <span className="text-sm font-medium">Ventilación</span>
-                    </div>
+                    {equipmentList.length === 0 ? (
+                      <div className="col-span-2 text-sm text-slate-500 italic">No hay equipamiento registrado en la base de datos.</div>
+                    ) : (
+                      equipmentList.map(eq => (
+                        <div key={eq.id} className="flex items-center gap-4 text-on-surface-variant">
+                          <span className="material-symbols-outlined text-primary-container">inventory_2</span>
+                          <span className="text-sm font-medium">{eq.equipmentName} {eq.quantity > 1 ? `(x${eq.quantity})` : ''}</span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -472,6 +489,8 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
           </div>
         </section>
       )}
+
+      {/* Modal para Gestión de Equipos Removido */}
 
       {/* Bottom Mobile Nav (Shell Integration) */}
       <div className="md:hidden fixed bottom-0 w-full bg-slate-50/90 backdrop-blur-lg border-t border-slate-200 z-50">
