@@ -140,6 +140,7 @@ public class PlaceService {
         var activeBookings = bookingRepository.findCompletedByPlaceIdAndEndTimeAfter(placeId, LocalDateTime.now());
         for(var booking : activeBookings){
             booking.setStatus(com.resernur.api.models.enums.BookingStatus.CANCELLED);
+            notificationService.createNotification(booking.getBookingRequest().getUser().getId(), "Debido a razones de mantenimiento, tu reserva para el lugar " + booking.getBookingRequest().getPlace().getName() + " ha sido cancelada.");
             notificationService.createNotification(booking.
                     getBookingRequest().getUser().getId(), "Debido a razones de mantenimiento, tu reserva para el lugar " + booking.getBookingRequest().getPlace().getName() + " ha sido cancelada.");
 

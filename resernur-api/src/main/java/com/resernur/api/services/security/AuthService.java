@@ -52,4 +52,8 @@ public class AuthService {
         var jwtToken = jwtService.generateToken(user);
         return new TokenAuth(jwtToken);
     }
+
+        public boolean userExists(String email) {
+                return repository.findByEmail(email).isPresent();
+        }
 }

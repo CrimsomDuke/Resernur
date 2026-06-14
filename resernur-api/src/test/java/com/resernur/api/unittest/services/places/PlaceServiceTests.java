@@ -15,6 +15,7 @@ import com.resernur.api.repositories.users.UserRepository;
 import com.resernur.api.services.NotificationService;
 import com.resernur.api.services.places.PlaceService;
 import com.resernur.api.utils.components.places.PlaceValidationComponent;
+import com.resernur.api.utils.components.places.PlaceValidationComponent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
