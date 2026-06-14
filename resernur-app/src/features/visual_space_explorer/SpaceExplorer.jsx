@@ -290,12 +290,14 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
           <div className="h-[1px] flex-1 bg-surface-container-highest"></div>
         </div>
 
-        {isLoading ? (
-          <div className="text-center p-8">Cargando espacios del catálogo...</div>
-        ) : errorMsg ? (
-          <div className="text-center p-8 rounded-xl bg-red-50 border border-red-200 text-red-700">
+        {errorMsg && (
+          <div className="text-center p-8 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700">
             {errorMsg}
           </div>
+        )}
+
+        {isLoading ? (
+          <div className="text-center p-8">Cargando espacios del catálogo...</div>
         ) : filteredSpaces.length === 0 ? (
           <div className="text-center p-8 rounded-xl bg-surface-container-low border border-surface-container-high text-on-surface-variant">
             No hay espacios para mostrar en este momento.
