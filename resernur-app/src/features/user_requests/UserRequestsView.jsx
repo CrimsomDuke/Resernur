@@ -9,7 +9,7 @@ function authHeaders() {
     : { 'Content-Type': 'application/json' };
 }
 
-function formatDateTime(iso) {
+export function formatDateTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleString('es-BO', {
