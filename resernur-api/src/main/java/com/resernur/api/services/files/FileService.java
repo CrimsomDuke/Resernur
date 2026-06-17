@@ -33,7 +33,7 @@ public class FileService {
     @Autowired
     private FileRepository fileRepository;
 
-    private static final long MAX_IMAGE_SIZE = 5L * 1024L * 1024L;
+    private static final long MAX_IMAGE_SIZE = 50L * 1024L * 1024L;
 
     public StandardResult<File> saveFile(MultipartFile fileData) throws IOException {
 
