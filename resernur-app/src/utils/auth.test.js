@@ -22,7 +22,6 @@ describe('Auth Util - parseTokenPayload', () => {
     })
 
     test('isAuthenticated queries the localstorage', () => {
-        //Arrange
         const token = "eyhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30";
         const localStorageMock = {
             getItem: vi.fn((key) => token),
@@ -30,12 +29,10 @@ describe('Auth Util - parseTokenPayload', () => {
             removeItem: vi.fn((key) => console.log('remove ' + key))
         }
 
-        //Set mock as value to use
         Object.defineProperty(global, 'localStorage', {
             value: localStorageMock
         })
 
-        //act 
         const result = isAuthenticated();
 
         expect(result).not.toBe(null);
