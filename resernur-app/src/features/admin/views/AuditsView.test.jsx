@@ -225,6 +225,68 @@ describe('AuditsView Component', () => {
     );
   });
 
+  it('debería probar todos los casos de paginación (páginas del final, ellipsis y botón anterior)', async () => {
+    const mockLogs = {
+      content: [{ id: 1, entityName: 'PLACES', entityId: 10, action: 'CREATE', description: 'Test', executorId: 2, timestamp: '2026-06-15T12:00:00Z' }],
+      totalPages: 10,
+      totalElements: 100
+    };
+
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockLogs),
+    });
+
+    render(<AuditsView />);
+
+    // Esperar que cargue
+    await screen.findByRole('button', { name: /chevron_right/i });
+
+    // Hacemos clic en el botón '10' (página con índice 9, al final)
+    const pageButton = screen.getByRole('button', { name: '10' });
+    await act(async () => {
+      fireEvent.click(pageButton);
+    });
+
+    // En la última página, el botón anterior ("chevron_left") está habilitado
+    const prevButton = screen.getByRole('button', { name: /chevron_left/i });
+    expect(prevButton).not.toBeDisabled();
+
+    // Hacemos clic en el botón anterior para volver a la página index 8
+    await act(async () => {
+      fireEvent.click(prevButton);
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('page=8'),
+      expect.any(Object)
+    );
+  });
+
+  it('debería renderizar paginación simple sin ellipsis si totalPages es menor o igual a 5', async () => {
+    const mockLogs = {
+      content: [{ id: 1, entityName: 'PLACES', entityId: 10, action: 'CREATE', description: 'Test', executorId: 2, timestamp: '2026-06-15T12:00:00Z' }],
+      totalPages: 3,
+      totalElements: 30
+    };
+
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockLogs),
+    });
+
+    render(<AuditsView />);
+
+    // Esperar que cargue
+    await screen.findByRole('button', { name: /chevron_right/i });
+
+    // Deberían estar los botones de página 1, 2 y 3, pero no ellipsis
+    expect(screen.getByRole('button', { name: '1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '3' })).toBeInTheDocument();
+    expect(screen.queryByText('...')).not.toBeInTheDocument();
+  });
+
   it('debería recargar los datos al hacer clic en actualizar', async () => {
     globalThis.fetch.mockResolvedValue({
       ok: true,
