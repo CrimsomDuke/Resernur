@@ -61,6 +61,7 @@ describe('Login Component', () => {
     globalThis.fetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
+      json: () => Promise.resolve({}),
     });
 
     render(<Login onLoginSuccess={() => {}} />);
