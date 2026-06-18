@@ -327,6 +327,7 @@ export default function UserManagementView() {
                   />
                   <button
                     type="button"
+                    aria-label="Toggle password visibility"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
                   >
