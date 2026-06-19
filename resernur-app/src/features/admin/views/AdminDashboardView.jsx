@@ -78,6 +78,7 @@ export default function AdminDashboardView({ onNavigate }) {
         {METRIC_DEFINITIONS.map((def) => (
           <article
             key={def.key}
+            data-testid={`metric-card-${def.key}`}
             onClick={() => {
               if (def.key === 'pending') {
                 onNavigate?.('requests');
