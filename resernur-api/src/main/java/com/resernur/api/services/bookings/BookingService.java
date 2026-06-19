@@ -10,8 +10,10 @@ import com.resernur.api.models.bookings.BookingRequest;
 import com.resernur.api.models.enums.Actions;
 import com.resernur.api.models.enums.BookingRequestStatus;
 import com.resernur.api.models.enums.BookingStatus;
+import com.resernur.api.models.enums.PlaceStatus;
 import com.resernur.api.repositories.bookings.BookingRepository;
 import com.resernur.api.services.auditlogs.LogService;
+import com.resernur.api.services.places.PlaceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +31,9 @@ public class BookingService {
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private PlaceService placeService;
 
     @Autowired
     private LogService logService;
@@ -88,8 +93,12 @@ public class BookingService {
         if (opt.isEmpty()) return new StandardResult<>(false, "Booking not found", null);
         Booking b = opt.get();
         if (b.getStatus() == BookingStatus.CANCELLED) return new StandardResult<>(false, "Already cancelled", null);
+
         b.setStatus(BookingStatus.CANCELLED);
         bookingRepository.save(b);
+
+        //Cancelamos todas las reservas
+        placeService.changePlaceStatus(b.getPlace().getId(), PlaceStatus.AVAILABLE);
         return new StandardResult<>(true, "", null);
     }
 
