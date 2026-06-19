@@ -26,6 +26,5 @@ module.exports = defineConfig({
       
       return config;
     },
-    // ... any other e2e settings you have (baseUrl, etc.)
   },
 });
