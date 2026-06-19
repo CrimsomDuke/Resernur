@@ -56,6 +56,9 @@ public class BookingRequestService {
     private PlaceRepository placeRepository;
 
     @Autowired
+    private PlaceService placeService;
+
+    @Autowired
     private FileService fileService;
 
     @Autowired
@@ -232,7 +235,6 @@ public class BookingRequestService {
         if(resBooking.isSuccess() == false) return new StandardResult<>(false, "Failed to create booking from accepted request: " + resBooking.getErrorMessage(), toDTO(req));
 
         notificationService.createNotification(req.getUser().getId(), "Se aceptó tu solicitud.");
-
         logService.logAction(Actions.APPROVE, userId, "BOOKING_REQUEST", resBooking.getData().getBookingRequestId());
 
         return new StandardResult<>(true, "", toDTO(req));
