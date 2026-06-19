@@ -59,6 +59,7 @@ describe('Flujo de Administración: Gestión de Reservas', () => {
     cy.wait('@createBooking').then((interception) => {
       expect(interception.response.statusCode).to.eq(400);
       const requestId = interception.response.body?.data?.id || interception.response.body?.id;
+      console.log(interception.response.body);
       expect(requestId).to.exist;
       cy.log(`Solicitud creada con ID: ${requestId}`);
       cy.wrap(requestId).as('createdRequestId');
