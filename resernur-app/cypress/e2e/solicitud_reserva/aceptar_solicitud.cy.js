@@ -86,8 +86,7 @@ describe('Flujo de Administración: Gestión de Reservas', () => {
         cy.get('[data-testid="accept-request-btn"]').click();
       });
 
-    // 5. Interceptar la llamada de aceptación y verificar éxito
-    cy.intercept('PATCH', '**/api/bookings/**').as('acceptRequest');
-    cy.wait('@acceptRequest').its('response.statusCode').should('eq', 200);
+    // 5. Verificar que la solicitud ya no aparece en la lista de pendientes
+    cy.contains('td', uniqueReason, { timeout: 10000 }).should('not.exist');
   });
 });
