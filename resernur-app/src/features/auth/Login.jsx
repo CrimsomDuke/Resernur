@@ -21,6 +21,7 @@ export default function Login({ onLoginSuccess }) {
       });
 
       if (!res.ok) {
+        console.log(await res.json())
         throw new Error("Credenciales inválidas o falla de conexión.");
       }
 
@@ -74,7 +75,7 @@ export default function Login({ onLoginSuccess }) {
 
           <div className="bg-surface-container-lowest rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.15)] p-10 border border-outline-variant/15 relative overflow-hidden">
             {errorMsg && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-6 text-center text-sm font-bold border border-red-200">
+              <div data-testid="login-error" className="bg-red-50 text-red-600 p-3 rounded-lg mb-6 text-center text-sm font-bold border border-red-200">
                 {errorMsg}
               </div>
             )}
@@ -91,6 +92,7 @@ export default function Login({ onLoginSuccess }) {
                     placeholder="usuario@nur.edu" 
                     required 
                     type="email" 
+                    data-testid="email-field"
                   />
                 </div>
               </div>
@@ -109,6 +111,7 @@ export default function Login({ onLoginSuccess }) {
                     placeholder="••••••••" 
                     required 
                     type="password" 
+                    data-testid="password-field"
                   />
                 </div>
               </div>
@@ -118,6 +121,7 @@ export default function Login({ onLoginSuccess }) {
                   className="w-full py-4 rounded-lg bg-gradient-to-r from-primary-container to-primary text-on-primary font-label text-sm uppercase tracking-widest font-bold hover:shadow-lg hover:translate-y-[-1px] transition-all" 
                   type="submit"
                   disabled={isLoading}
+                  data-testid="login-button"
                 >
                   {isLoading ? "Validando..." : "Ingresar"}
                 </button>

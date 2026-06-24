@@ -31,8 +31,10 @@ public class LogService {
         logAction(actions, "", executorId, entityName, entityId);
     }
 
-    public PagedResponse<AuditLog> searchLogs(Integer executorId, String entityName, Integer entityId, Actions action, int page, int pageSize) {
-        Page<AuditLog> logs = auditLogRepository.findForSearch(executorId, entityName, entityId, action, org.springframework.data.domain.PageRequest.of(page, pageSize));
+    public PagedResponse<AuditLog> searchLogs(Integer executorId, String entityName, Integer entityId, Actions action, java.time.LocalDateTime startDate, java.time.LocalDateTime endDate, int page, int pageSize) {
+        java.time.LocalDateTime safeStart = startDate != null ? startDate : java.time.LocalDateTime.of(1970,1,1,0,0);
+        java.time.LocalDateTime safeEnd = endDate != null ? endDate : java.time.LocalDateTime.of(3000,1,1,23,59,59);
+        Page<AuditLog> logs = auditLogRepository.findForSearch(executorId, entityName, entityId, action, safeStart, safeEnd, org.springframework.data.domain.PageRequest.of(page, pageSize));
         PagedResponse<AuditLog> response = new PagedResponse<>();
         response.setContent(logs.getContent());
         response.setPageSize(pageSize);

@@ -7,6 +7,7 @@ import AdminRequestsView from './views/AdminRequestsView';
 import AdminBookingsView from './views/AdminBookingsView';
 import AdminAnalyticsView from './views/AdminAnalyticsView';
 import UserManagementView from './views/UserManagementView';
+import AuditsView from './views/AuditsView';
 
 const ALL_MENU_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -14,7 +15,8 @@ const ALL_MENU_ITEMS = [
   { key: 'reservations', label: 'Reservas', icon: 'event_seat' },
   { key: 'create-space', label: 'Crear espacios', icon: 'add_business' },
   { key: 'users', label: 'Usuarios', icon: 'group' },
-  { key: 'analytics', label: 'Analitica', icon: 'insights' }
+  { key: 'analytics', label: 'Analitica', icon: 'insights' },
+  { key: 'audits', label: 'Auditoria', icon: 'history_edu' }
 ];
 
 export default function AdminPanel({ editingSpace = null, onEditHandled, isManager = false }) {
@@ -67,6 +69,10 @@ export default function AdminPanel({ editingSpace = null, onEditHandled, isManag
 
     if (activeSection === 'users') {
       return <UserManagementView />;
+    }
+
+    if (activeSection === 'audits') {
+      return <AuditsView />;
     }
 
     return (

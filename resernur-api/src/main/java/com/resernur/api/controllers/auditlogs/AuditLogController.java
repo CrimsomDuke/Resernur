@@ -24,11 +24,21 @@ public class AuditLogController {
             @RequestParam(value = "entityName", required = false) String entityName,
             @RequestParam(value = "entityId", required = false) Integer entityId,
             @RequestParam(value = "action", required = false) Actions action,
+            @RequestParam(value = "startDate", required = false) String startDate,
+            @RequestParam(value = "endDate", required = false) String endDate,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize
     ){
         try{
-            return ResponseEntity.ok(logService.searchLogs(executorId, entityName, entityId, action, page, pageSize));
+            java.time.LocalDateTime start = null;
+            java.time.LocalDateTime end = null;
+            if (startDate != null && !startDate.isBlank()) {
+                start = java.time.LocalDateTime.parse(startDate);
+            }
+            if (endDate != null && !endDate.isBlank()) {
+                end = java.time.LocalDateTime.parse(endDate);
+            }
+            return ResponseEntity.ok(logService.searchLogs(executorId, entityName, entityId, action, start, end, page, pageSize));
         }catch (Exception ex){
             PagedResponse<AuditLog> resp = new PagedResponse<>();
             resp.setSuccess(false);
