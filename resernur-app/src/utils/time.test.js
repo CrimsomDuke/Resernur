@@ -1,16 +1,29 @@
-/* eslint-disable no-undef */
-import { formatTimeRange } from './time'
+import { formatDateTime, formatDateOnly, formatTimeRange } from './time';
+import { describe, test, expect } from 'vitest';
 
 describe('Test para Time Utils', () => {
-    test('Formate date range devuelve string correcto', () => {
-        const start = "2026-01-01";
-        const end = "2026-02-02";
+  test('formatDateTime debería retornar string formateado o guión', () => {
+    expect(formatDateTime(null)).toBe('—');
+    expect(formatDateTime(undefined)).toBe('—');
+    expect(formatDateTime('')).toBe('—');
 
-        const result = formatTimeRange(start, end);
+    const result = formatDateTime('2026-06-24T15:00:00Z');
+    expect(result).toContain('2026');
+  });
 
-        expect(result).toBeTruthy();
-        expect(result.length).toBeGreaterThan(3)
-        expect(typeof(result)).toBe('string')
-        console.log(result);
-    })
-})
+  test('formatDateOnly debería retornar string formateado o guión', () => {
+    expect(formatDateOnly(null)).toBe('—');
+    expect(formatDateOnly(undefined)).toBe('—');
+
+    const result = formatDateOnly('2026-06-24T15:00:00Z');
+    expect(result).toContain('2026');
+  });
+
+  test('formatTimeRange debería retornar string con rango de horas o guión', () => {
+    expect(formatTimeRange(null, '2026-06-24T15:00:00Z')).toBe('—');
+    expect(formatTimeRange('2026-06-24T15:00:00Z', null)).toBe('—');
+
+    const result = formatTimeRange('2026-06-24T15:00:00Z', '2026-06-24T17:00:00Z');
+    expect(result).toContain('–');
+  });
+});
