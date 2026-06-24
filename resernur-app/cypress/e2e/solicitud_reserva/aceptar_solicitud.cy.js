@@ -57,7 +57,7 @@ describe('Flujo de Administración: Gestión de Reservas', () => {
 
     // Esperar la respuesta y extraer el ID
     cy.wait('@createBooking').then((interception) => {
-      expect(interception.response.statusCode).to.eq(400);
+      expect(interception.response.statusCode).to.eq(201);
       const requestId = interception.response.body?.data?.id || interception.response.body?.id;
       console.log(interception.response.body);
       expect(requestId).to.exist;
