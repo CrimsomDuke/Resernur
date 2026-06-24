@@ -11,7 +11,13 @@ export default defineConfig({
       provider: 'istanbul',
       reporter: ['text', 'html'],
       include: ['src/**/*'],
-      exclude: ['src/**/*.test.jsx', 'src/**/*.spec.jsx', 'src/setupTests.js'],
+      exclude: [
+        'src/**/*.test.jsx', 
+        'src/**/*.spec.jsx', 
+        'src/setupTests.js',
+        'src/main.jsx',
+        'src/App.jsx'
+      ],
       clean: false,
     },
   },
