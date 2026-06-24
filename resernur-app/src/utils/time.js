@@ -1,4 +1,4 @@
-function formatDateTime(iso) {
+export function formatDateTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleString('es-BO', {
@@ -7,7 +7,7 @@ function formatDateTime(iso) {
   });
 }
 
-function formatDateOnly(iso) {
+export function formatDateOnly(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
