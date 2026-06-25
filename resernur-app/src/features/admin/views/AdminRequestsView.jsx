@@ -285,10 +285,10 @@ export default function AdminRequestsView() {
       </div>
 
       {/* ── Two-column layout ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.5rem', alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'start' }}>
 
         {/* ── Left column ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 }}>
+        <div style={{ flex: '1 1 700px', display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 }}>
 
           {/* Requests table */}
           <div style={{ background: '#fff', borderRadius: '0.75rem', border: '1px solid var(--color-surface-container-high, #e6e8ea)', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,30,64,0.06)' }}>
@@ -333,7 +333,7 @@ export default function AdminRequestsView() {
                     <thead>
                       <tr style={{ background: 'rgba(0,30,64,0.03)', borderBottom: '1px solid var(--color-surface-container-high, #e6e8ea)' }}>
                         {['Fecha / Hora', 'Solicitante', 'Espacio', 'Motivo', 'Acciones'].map((h) => (
-                          <th key={h} style={{ padding: '0.75rem 1.25rem', textAlign: 'left', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-on-surface-variant, #43474f)', whiteSpace: 'nowrap' }}>
+                          <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-on-surface-variant, #43474f)', whiteSpace: 'nowrap' }}>
                             {h}
                           </th>
                         ))}
@@ -401,6 +401,7 @@ export default function AdminRequestsView() {
                                 <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-start' }} onClick={(e) => e.stopPropagation()}>
                                   <button
                                     title="Aprobar"
+                                    data-testid="accept-request-btn"
                                     onClick={() => handleAccept(req.id)}
                                     style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#d1fae5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = '#059669'; e.currentTarget.style.color = '#fff'; }}
@@ -652,8 +653,8 @@ export default function AdminRequestsView() {
         </div>
 
         {/* ── Right sidebar: recent feed ── */}
-        <div style={{ position: 'sticky', top: '2rem' }}>
-          <div style={{ background: 'var(--color-surface-container-low, #f2f4f6)', borderRadius: '0.75rem', padding: '1.5rem' }}>
+        <div style={{ flex: '1 0 320px', position: 'sticky', top: '2rem' }}>
+          <div style={{ background: 'var(--color-surface-container-low, #f2f4f6)', borderRadius: '0.75rem', padding: '1.5rem', width: '100%', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ fontFamily: 'var(--font-headline, Manrope, sans-serif)', fontWeight: 700, color: 'var(--color-primary, #001e40)', margin: 0 }}>
                 Historial de Decisiones

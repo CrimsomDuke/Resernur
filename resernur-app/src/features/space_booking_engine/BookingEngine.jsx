@@ -266,14 +266,19 @@ export default function BookingEngine({ spaceToBook, onGoBack }) {
                 >
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-12 py-4 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-md shadow-lg flex items-center gap-3 hover:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  <span>{isSubmitting ? 'Enviando solicitud...' : 'Enviar Solicitud'}</span>
-                  <span className="material-symbols-outlined text-xl">arrow_forward</span>
-                </button>
+                {
+                (spaceToBook.status && spaceToBook.status !== 'AVAILABLE') ? (
+                    <p>No disponible</p> 
+                  ) : (
+                     <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-12 py-4 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-md shadow-lg flex items-center gap-3 hover:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <span>{isSubmitting ? 'Enviando solicitud...' : 'Enviar Solicitud'}</span>
+                      <span className="material-symbols-outlined text-xl">arrow_forward</span>
+                    </button>
+                  )}
               </div>
 
             </form>
