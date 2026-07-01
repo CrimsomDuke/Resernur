@@ -65,7 +65,7 @@ export default function AdminBookingsView() {
   // Pagination
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 200;
 
   const [activeTab, setActiveTab] = useState('activas');
 
@@ -73,8 +73,9 @@ export default function AdminBookingsView() {
     setLoading(true);
     setError(null);
     try {
+      let statusVal = activeTab === 'activas' ? 'COMPLETED' : 'PAST';
       const res = await fetch(
-        `${API}/api/bookings?status=COMPLETED&page=${p}&pageSize=${PAGE_SIZE}`,
+        `${API}/api/bookings?status=${statusVal}&page=${p}&pageSize=${PAGE_SIZE}`,
         { headers: authHeaders() }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

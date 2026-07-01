@@ -68,7 +68,7 @@ export default function AdminRequestsView() {
   // Pagination
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 200;
 
   // ---------------------------------------------------------------------------
   // Fetch requests

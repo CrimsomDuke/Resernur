@@ -15,6 +15,9 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
   
   const [equipmentList, setEquipmentList] = useState([]);
 
+  const [pageSize, setPageSize] = useState(100);
+  const [pageNumber, setPageNumber] = useState(0);
+
   const DEFAULT_IMAGES = [
     "https://lh3.googleusercontent.com/aida-public/AB6AXuCnw1bJEiqqg6hJ0WgN5OEE3d9xXzaa5CnvKVVKfWDu2waWCJ1Zw2ImMb4KikxZGOb9hWmXi9gwxVubXM2XKhMMm5kGTp8OxpMo_MjQdX8l11HmcJZg7r7WoMeRJk-I-4zR7J-mxIhOg6k4eRBQ_bVayhZMtERQirMCmUpSXNIAsm4tWZULclwjIcVIP8BWdXM4aOrFI9Wh4cOYiCrFUrYyKAgwW61K6seaVLCpmHjX_dISaLj7oCTsFaNspKyLCcsRVg_NGsO498w",
     "https://lh3.googleusercontent.com/aida-public/AB6AXuBn0WnBxGNPHdZnJS6k4vmL84ldZMzye8t7nNvm3Olh9IU1hwx_NUzfPEFT8WlP25wQl1_y908B4s3M_U6KIo154EEBjIXYfyVFQZ23sKHdI3xXT-fP_WTHsfkguVF8g_W6kgYr86IpQ7LlTCyb8baPXvoCZFLk0wBvDFXxoUQJZ_Oh0gGkW5IuVlTJHIAU_A6nNZ_Gm6rL2vmI3Cf9Duhwaxli8_EqBw-2j3nSYOW_ui1N1LAZb5g3NGDDprRrB8q0vh9NNCRiuuk",
@@ -74,7 +77,7 @@ export default function SpaceExplorer({ onReserve, onAuthError, isAdmin = false,
         }
       }
 
-      const response = await fetch("http://localhost:5000/api/places", { headers });
+      const response = await fetch("http://localhost:5000/api/places?pageSize=" + pageSize, { headers });
       if (response.status === 401 || response.status === 403) {
         localStorage.removeItem("resernur_token");
         if (onAuthError) onAuthError();
